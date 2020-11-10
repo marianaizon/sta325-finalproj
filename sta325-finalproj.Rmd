@@ -13,6 +13,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r load-packages, message=FALSE}
 library(readr)
 library(dplyr)
+library(tidyverse)
 ```
 
 ```{r load-clean-data, message=FALSE}
@@ -29,5 +30,39 @@ flights <- flights %>%
          SECURITY_DELAY = case_when(SECURITY_DELAY > 0 ~ 1),
          LATE_AIRCRAFT_DELAY = case_when(LATE_AIRCRAFT_DELAY > 0 ~ 1))
 
+```
+
+```{r}
+flights
+```
+
+## Taxi Histograms
+
+```{r}
+ggplot(data = flights, aes(x = TAXI_IN)) +
+  geom_histogram(binwidth = 5, fill = "#E81828", color = "#002D72") +
+  labs(x = "Time to Taxi In",
+       title = "Histogram of TAXI_IN")
+
+ggplot(data = flights, aes(x = TAXI_OUT)) +
+  geom_histogram(binwidth = 5, fill = "#E81828", color = "#002D72") +
+  labs(x = "Time to Taxi Out",
+       title = "Histogram of TAXI_OUT")
+```
+
+## Delay Histograms
+
+```{r}
+ggplot(data = flights, aes(x = ARR_DELAY)) +
+  geom_histogram(binwidth = 20, fill = "#E81828", color = "#002D72") +
+  xlim(-100, 150) +
+  labs(x = "Arrival Delay",
+       title = "Histogram of ARR_DELAY")
+
+ggplot(data = flights, aes(x = DEP_DELAY)) +
+  geom_histogram(binwidth = 4, fill = "#E81828", color = "#002D72") +
+  xlim(-25, 50) +
+  labs(x = "Departure Delay",
+       title = "Histogram of DEP_DELAY")
 ```
 
