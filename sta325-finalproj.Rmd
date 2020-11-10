@@ -10,3 +10,24 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 
+```{r load-packages, message=FALSE}
+library(readr)
+library(dplyr)
+```
+
+```{r load-clean-data, message=FALSE}
+flights <- read_csv("data/flights.csv")
+
+unique(flights$OP_CARRIER)
+unique(flights$DEST)
+class(flights$CARRIER_DELAY)
+
+flights <- flights %>% 
+  mutate(CARRIER_DELAY = case_when(CARRIER_DELAY > 0 ~ 1),
+         WEATHER_DELAY = case_when(WEATHER_DELAY > 0 ~ 1),
+         NAS_DELAY = case_when(NAS_DELAY > 0 ~ 1),
+         SECURITY_DELAY = case_when(SECURITY_DELAY > 0 ~ 1),
+         LATE_AIRCRAFT_DELAY = case_when(LATE_AIRCRAFT_DELAY > 0 ~ 1))
+
+```
+
