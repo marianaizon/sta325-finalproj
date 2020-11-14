@@ -14,7 +14,10 @@ knitr::opts_chunk$set(echo = TRUE)
 library(readr)
 library(dplyr)
 library(tidyverse)
+library(gridExtra)
 ```
+
+
 
 ```{r load-clean-data, message=FALSE}
 flights <- read_csv("data/flights.csv")
@@ -24,11 +27,19 @@ unique(flights$DEST)
 class(flights$CARRIER_DELAY)
 
 flights <- flights %>% 
-  mutate(CARRIER_DELAY = case_when(CARRIER_DELAY > 0 ~ 1),
-         WEATHER_DELAY = case_when(WEATHER_DELAY > 0 ~ 1),
-         NAS_DELAY = case_when(NAS_DELAY > 0 ~ 1),
-         SECURITY_DELAY = case_when(SECURITY_DELAY > 0 ~ 1),
-         LATE_AIRCRAFT_DELAY = case_when(LATE_AIRCRAFT_DELAY > 0 ~ 1))
+  mutate(CARRIER_DELAY = case_when(CARRIER_DELAY > 0 ~ 1,
+                                   TRUE ~ 0),
+         WEATHER_DELAY = case_when(WEATHER_DELAY > 0 ~ 1,
+                                   TRUE ~ 0),
+         NAS_DELAY = case_when(NAS_DELAY > 0 ~ 1,
+                               TRUE ~ 0),
+         SECURITY_DELAY = case_when(SECURITY_DELAY > 0 ~ 1,
+                                    TRUE ~ 0),
+         LATE_AIRCRAFT_DELAY = case_when(
+           LATE_AIRCRAFT_DELAY > 0 ~ 1,
+           TRUE ~ 0))
+
+
 
 ```
 
@@ -36,33 +47,299 @@ flights <- flights %>%
 flights
 ```
 
+# INDIVIDUAL PREDICTORS
+
 ## Taxi Histograms
 
 ```{r}
-ggplot(data = flights, aes(x = TAXI_IN)) +
+p00 <- ggplot(data = flights, aes(x = TAXI_IN)) +
   geom_histogram(binwidth = 5, fill = "#E81828", color = "#002D72") +
   labs(x = "Time to Taxi In",
        title = "Histogram of TAXI_IN")
 
-ggplot(data = flights, aes(x = TAXI_OUT)) +
+p01 <- ggplot(data = flights, aes(x = TAXI_OUT)) +
   geom_histogram(binwidth = 5, fill = "#E81828", color = "#002D72") +
   labs(x = "Time to Taxi Out",
        title = "Histogram of TAXI_OUT")
+
+grid.arrange(p00, p01, nrow = 1)
 ```
 
-## Delay Histograms
+## Days of Month and Week
 
 ```{r}
-ggplot(data = flights, aes(x = ARR_DELAY)) +
-  geom_histogram(binwidth = 20, fill = "#E81828", color = "#002D72") +
-  xlim(-100, 150) +
-  labs(x = "Arrival Delay",
-       title = "Histogram of ARR_DELAY")
+p02 <- ggplot(data = flights, aes(x = DAY_OF_MONTH)) +
+  geom_histogram(binwidth = 1, fill = "#E81828", color = "#002D72") +
+  labs(x = "Days of Month",
+       title = "Histogram of Days of Month")
 
+p03 <- ggplot(data = flights, aes(x = DAY_OF_WEEK)) +
+  geom_histogram(binwidth = 1, fill = "#E81828", color = "#002D72") +
+  labs(x = "Day of Week",
+       title = "Histogram of Days of Week")
+
+grid.arrange(p00, p01, nrow = 1)
+```
+
+## Destination Locations
+
+Origin is all JFK, but we could consider the different destination locations. 
+
+```{r}
+ggplot(data = flights, aes(x = DEST)) +
+  geom_bar(fill = "#E81828", color = "#002D72") +
+  labs(x = "Destinations",
+       title = "Bar Plot of Destinations")
+```
+
+## Depart Delay Histogram
+
+```{r}
 ggplot(data = flights, aes(x = DEP_DELAY)) +
   geom_histogram(binwidth = 4, fill = "#E81828", color = "#002D72") +
   xlim(-25, 50) +
   labs(x = "Departure Delay",
        title = "Histogram of DEP_DELAY")
 ```
+```{r}
+p1 <- ggplot(data = flights, aes(x = CARRIER_DELAY)) +
+  geom_bar(fill = "#E81828", color = "#002D72") +
+  labs(title = "Carrier Delay")
+
+p2 <- ggplot(data = flights, aes(x = WEATHER_DELAY)) +
+  geom_bar(fill = "#E81828", color = "#002D72") +
+  labs(title = "Weather Delay")
+
+p3 <- ggplot(data = flights, aes(x = NAS_DELAY)) +
+  geom_bar(fill = "#E81828", color = "#002D72") +
+  labs(title = "NAS Delay")
+
+p4 <- ggplot(data = flights, aes(x = SECURITY_DELAY)) +
+  geom_bar(fill = "#E81828", color = "#002D72") +
+  labs(title = "Security Delay")
+
+p5 <- ggplot(data = flights, aes(x = LATE_AIRCRAFT_DELAY)) +
+  geom_bar(fill = "#E81828", color = "#002D72") +
+  labs(title = "Late Aircraft Delay")
+
+grid.arrange(p1,p2,p3,p4,p5, nrow = 3)
+```
+
+From this EDA of the categorical variables, we probably should not perform analysis with `SECURITY_DELAY` since all of them are classified as 0. 
+
+```{r}
+flights %>%
+  count(WEATHER_DELAY)
+```
+Furthermore, only 9 flights are classified with a weather delay, so it may not be good for our model to include this as a variable for right now. 
+
+Overall, the categorical delay predictors I would think we could use are: Carrier Delay, NAS Delay, and Late Aircraft Delay
+
+## RESPONSE VARIABLE: ARRIVAL DELAY TIME
+
+I just made it a different color so that when I scroll up to look at distributions I can easily tell the response from predictors (definitely can change at the end).
+
+```{r}
+ggplot(data = flights, aes(x = ARR_DELAY)) +
+  geom_histogram(binwidth = 20, fill = "#002D72", color = "#E81828" ) +
+  xlim(-100, 150) +
+  labs(x = "Arrival Delay",
+       title = "Histogram of ARR_DELAY")
+```
+
+
+# PREDICTORS VS RESPONSE
+
+## ARR_DELAY and TAXI_IN / TAXI_OUT
+
+```{r}
+p6 <- ggplot(data = flights, aes(y = ARR_DELAY, x = TAXI_IN)) +
+  geom_point() +
+  labs(title = "Arrival Delay vs Taxi_In")
+
+p7 <- ggplot(data = flights, aes(y = ARR_DELAY, x = TAXI_OUT)) +
+  geom_point() +
+  labs(title = "Arrival Delay vs Taxi_Out")
+
+grid.arrange(p6,p7, nrow = 1)
+```
+
+These plots above suggest that we may want to transform the variables at some point. 
+
+```{r}
+ggplot(data = flights, aes(y = ARR_DELAY, x = DEST)) +
+  geom_boxplot() +
+  labs(x = "Destination",
+       title = "Arrival Delay vs Destination")
+```
+
+## ARR_DELAY and DAY_OF_WEEK
+
+```{r}
+p8 <- ggplot(data = flights, aes(y = ARR_DELAY, x = DAY_OF_WEEK)) +
+  geom_point() +
+  labs(title = "Arrival Delay vs Day of Week")
+
+p9 <- ggplot(data = flights, aes(y = ARR_DELAY, group = DAY_OF_WEEK)) +
+  geom_boxplot() +
+  labs(title = "Arrival Delay vs Day of Week")
+
+grid.arrange(p8,p9, nrow = 2)
+```
+
+## ARR_DELAY and DAY_OF_MONTH
+
+```{r}
+p10 <- ggplot(data = flights, aes(y = ARR_DELAY, x = DAY_OF_MONTH)) +
+  geom_point() +
+  labs(title = "Arrival Delay vs Day of Month")
+
+p11 <- ggplot(data = flights, aes(y = ARR_DELAY, group = DAY_OF_MONTH)) +
+  geom_boxplot() +
+  labs(title = "Arrival Delay vs Day of Month")
+
+grid.arrange(p10, p11, nrow = 2)
+```
+
+
+# LINEAR MODELS
+
+
+
+Variables that I think we could explore: department delay time, days of month, days of week, taxi-in, taxi-out, destination, Carrier Delay, NAS Delay, and Late Aircraft Delay.
+
+### Full Model 
+
+First, let's just fit a full linear model with all the variables we would like to explore. 
+
+```{r}
+full_model <- lm(ARR_DELAY ~ DAY_OF_MONTH + 
+                   DAY_OF_WEEK +
+                   TAXI_IN +
+                   TAXI_OUT +
+                   DEST +
+                   DEP_DELAY +
+                   CARRIER_DELAY +
+                   NAS_DELAY +
+                   LATE_AIRCRAFT_DELAY, data = flights)
+
+summary(full_model)
+
+```
+
+
+### Select Model with AIC
+
+```{r}
+library(MASS)
+step_model <- stepAIC(full_model, trace = FALSE)
+summary(step_model)
+```
+
+The only variables that were removed were DAY_OF_WEEK and LATE_AIRCRAFT_DELAY. Let's continue using the step_model then. 
+
+### Interactions
+
+Because there are so many levels to Destination, I don't know if we should necessarily include an interaction with this categorical variable. My suggestion would be to find interactions with carrier_delay and nas_delay. 
+
+```{r}
+p12 <- ggplot(data = flights, aes(group = CARRIER_DELAY, y = TAXI_OUT)) +
+  geom_boxplot() +
+  labs(title = "Carrier Delay vs. Taxi_Out", 
+       x = "Carrier Delay")
+
+p13 <- ggplot(data = flights, aes(group = CARRIER_DELAY, y = TAXI_IN)) +
+  geom_boxplot() +
+  labs(title = "Carrier Delay vs. Taxi_In", 
+       x = "Carrier Delay")
+
+grid.arrange(p12, p13, nrow = 1)
+```
+
+```{r}
+p14 <- ggplot(data = flights, aes(group = NAS_DELAY, y = TAXI_OUT)) +
+  geom_boxplot() +
+  labs(title = "NAS Delay vs. Taxi_Out", 
+       x = "NAS Delay")
+
+p15 <- ggplot(data = flights, aes(group = NAS_DELAY, y = TAXI_IN)) +
+  geom_boxplot() +
+  labs(title = "NAS Delay vs. Taxi_In", 
+       x = "NAS Delay")
+
+grid.arrange(p14, p15, nrow = 1)
+```
+
+
+From what I'm seeing in the plots above, there could be an interaction between taxi_out and carrier_delay. There also seems to be an interaction between NAS delay and taxi_out as well as a possible one between NAS delay and taxi_in. Let's test these three interactions below.
+
+```{r}
+# carrier vs taxi out
+interaction1 <- lm(ARR_DELAY ~ DAY_OF_MONTH + 
+                   DAY_OF_WEEK +
+                   TAXI_IN +
+                   TAXI_OUT +
+                   DEST +
+                   DEP_DELAY +
+                   CARRIER_DELAY +
+                   NAS_DELAY +
+                  CARRIER_DELAY*TAXI_OUT, data = flights)
+# nas vs taxi out
+interaction2 <- lm(ARR_DELAY ~ DAY_OF_MONTH + 
+                   DAY_OF_WEEK +
+                   TAXI_IN +
+                   TAXI_OUT +
+                   DEST +
+                   DEP_DELAY +
+                   CARRIER_DELAY +
+                   NAS_DELAY +
+                  NAS_DELAY*TAXI_OUT, data = flights)
+
+# nas vs taxi in
+interaction3 <- lm(ARR_DELAY ~ DAY_OF_MONTH + 
+                   DAY_OF_WEEK +
+                   TAXI_IN +
+                   TAXI_OUT +
+                   DEST +
+                   DEP_DELAY +
+                   CARRIER_DELAY +
+                   NAS_DELAY +
+                  NAS_DELAY*TAXI_IN, data = flights)
+
+```
+
+
+```{r}
+anova(step_model, interaction1)
+```
+
+```{r}
+anova(step_model, interaction2)
+```
+
+```{r}
+anova(step_model, interaction3)
+```
+
+It actually seems that interaction3: NAS_DELAY and TAXI_IN is the only interaction that is statistically significant in predicting ARR_DELAY. Let's make this model our current model:
+
+### Final Linear Model
+
+
+```{r}
+current_model <- interaction3
+
+summary(current_model)
+```
+
+```{r}
+par(mfrow = c(2,2))
+plot(current_model)
+```
+The diagnostic plots above suggest that this model decently satisfies the necessary conditions to assume a linear regression.
+
+
+
+
+
 
