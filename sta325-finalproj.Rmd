@@ -15,11 +15,11 @@ library(readr)
 library(dplyr)
 library(tidyverse)
 library(gridExtra)
+library(mgcv)
 ```
 
 
-
-```{r load-clean-data, message=FALSE}
+```{r load-clean-data, warning=FALSE, message=FALSE}
 flights <- read_csv("data/flights.csv")
 
 unique(flights$OP_CARRIER)
@@ -78,7 +78,7 @@ p03 <- ggplot(data = flights, aes(x = DAY_OF_WEEK)) +
   labs(x = "Day of Week",
        title = "Histogram of Days of Week")
 
-grid.arrange(p00, p01, nrow = 1)
+grid.arrange(p02, p03, nrow = 1)
 ```
 
 ## Destination Locations
@@ -101,6 +101,7 @@ ggplot(data = flights, aes(x = DEP_DELAY)) +
   labs(x = "Departure Delay",
        title = "Histogram of DEP_DELAY")
 ```
+
 ```{r}
 p1 <- ggplot(data = flights, aes(x = CARRIER_DELAY)) +
   geom_bar(fill = "#E81828", color = "#002D72") +
@@ -131,6 +132,7 @@ From this EDA of the categorical variables, we probably should not perform analy
 flights %>%
   count(WEATHER_DELAY)
 ```
+
 Furthermore, only 9 flights are classified with a weather delay, so it may not be good for our model to include this as a variable for right now. 
 
 Overall, the categorical delay predictors I would think we could use are: Carrier Delay, NAS Delay, and Late Aircraft Delay
@@ -201,10 +203,18 @@ p11 <- ggplot(data = flights, aes(y = ARR_DELAY, group = DAY_OF_MONTH)) +
 grid.arrange(p10, p11, nrow = 2)
 ```
 
+# SPLITTING DATA
+
+```{r}
+set.seed(1234)
+flights <- flights %>%
+  mutate(id = row_number())
+train <- flights %>% 
+  sample_frac(0.8)
+test <- anti_join(flights, train, by = "id")
+```
 
 # LINEAR MODELS
-
-
 
 Variables that I think we could explore: department delay time, days of month, days of week, taxi-in, taxi-out, destination, Carrier Delay, NAS Delay, and Late Aircraft Delay.
 
@@ -221,7 +231,7 @@ full_model <- lm(ARR_DELAY ~ DAY_OF_MONTH +
                    DEP_DELAY +
                    CARRIER_DELAY +
                    NAS_DELAY +
-                   LATE_AIRCRAFT_DELAY, data = flights)
+                   LATE_AIRCRAFT_DELAY, data = train)
 
 summary(full_model)
 
@@ -230,7 +240,7 @@ summary(full_model)
 
 ### Select Model with AIC
 
-```{r}
+```{r, message=FALSE}
 library(MASS)
 step_model <- stepAIC(full_model, trace = FALSE)
 summary(step_model)
@@ -243,12 +253,12 @@ The only variables that were removed were DAY_OF_WEEK and LATE_AIRCRAFT_DELAY. L
 Because there are so many levels to Destination, I don't know if we should necessarily include an interaction with this categorical variable. My suggestion would be to find interactions with carrier_delay and nas_delay. 
 
 ```{r}
-p12 <- ggplot(data = flights, aes(group = CARRIER_DELAY, y = TAXI_OUT)) +
+p12 <- ggplot(data = train, aes(group = CARRIER_DELAY, y = TAXI_OUT)) +
   geom_boxplot() +
   labs(title = "Carrier Delay vs. Taxi_Out", 
        x = "Carrier Delay")
 
-p13 <- ggplot(data = flights, aes(group = CARRIER_DELAY, y = TAXI_IN)) +
+p13 <- ggplot(data = train, aes(group = CARRIER_DELAY, y = TAXI_IN)) +
   geom_boxplot() +
   labs(title = "Carrier Delay vs. Taxi_In", 
        x = "Carrier Delay")
@@ -257,12 +267,12 @@ grid.arrange(p12, p13, nrow = 1)
 ```
 
 ```{r}
-p14 <- ggplot(data = flights, aes(group = NAS_DELAY, y = TAXI_OUT)) +
+p14 <- ggplot(data = train, aes(group = NAS_DELAY, y = TAXI_OUT)) +
   geom_boxplot() +
   labs(title = "NAS Delay vs. Taxi_Out", 
        x = "NAS Delay")
 
-p15 <- ggplot(data = flights, aes(group = NAS_DELAY, y = TAXI_IN)) +
+p15 <- ggplot(data = train, aes(group = NAS_DELAY, y = TAXI_IN)) +
   geom_boxplot() +
   labs(title = "NAS Delay vs. Taxi_In", 
        x = "NAS Delay")
@@ -275,36 +285,33 @@ From what I'm seeing in the plots above, there could be an interaction between t
 
 ```{r}
 # carrier vs taxi out
-interaction1 <- lm(ARR_DELAY ~ DAY_OF_MONTH + 
-                   DAY_OF_WEEK +
+interaction1 <- lm(ARR_DELAY ~ DAY_OF_MONTH +
                    TAXI_IN +
                    TAXI_OUT +
                    DEST +
                    DEP_DELAY +
                    CARRIER_DELAY +
                    NAS_DELAY +
-                  CARRIER_DELAY*TAXI_OUT, data = flights)
+                  CARRIER_DELAY*TAXI_OUT, data = train)
 # nas vs taxi out
 interaction2 <- lm(ARR_DELAY ~ DAY_OF_MONTH + 
-                   DAY_OF_WEEK +
                    TAXI_IN +
                    TAXI_OUT +
                    DEST +
                    DEP_DELAY +
                    CARRIER_DELAY +
                    NAS_DELAY +
-                  NAS_DELAY*TAXI_OUT, data = flights)
+                  NAS_DELAY*TAXI_OUT, data = train)
 
 # nas vs taxi in
 interaction3 <- lm(ARR_DELAY ~ DAY_OF_MONTH + 
-                   DAY_OF_WEEK +
                    TAXI_IN +
                    TAXI_OUT +
                    DEST +
                    DEP_DELAY +
                    CARRIER_DELAY +
                    NAS_DELAY +
-                  NAS_DELAY*TAXI_IN, data = flights)
+                  NAS_DELAY*TAXI_IN, data = train)
 
 ```
 
@@ -336,10 +343,72 @@ summary(current_model)
 par(mfrow = c(2,2))
 plot(current_model)
 ```
+
 The diagnostic plots above suggest that this model decently satisfies the necessary conditions to assume a linear regression.
 
+### Test Error
 
+```{r}
+lm_preds <- predict(current_model, test)
+#mean((test$ARR_DELAY - lm_preds)^2)
+```
 
+***when all of the (test$ARR_DELAY - lm_preds)^2 are added up we get NA so not sure what to do abt that
 
+# GAM MODEL
 
+## Initial Model
+
+fit a gam model with numerical variables on a smoothing spline and including the interaction between NAS_DELAY and TAXI_IN
+
+```{r}
+gam00 <- gam(ARR_DELAY ~ DAY_OF_MONTH +
+                   s(TAXI_IN) +
+                   s(TAXI_OUT) +
+                   DEST +
+                   s(DEP_DELAY) +
+                   CARRIER_DELAY +
+                   NAS_DELAY +
+                   s(TAXI_IN, by = NAS_DELAY), data = flights)
+
+summary(gam00)
+```
+
+```{r}
+par(mfrow = c(2,2))
+plot.gam(gam00, se=TRUE)
+```
+
+## Checking Lineartiy
+
+TAXI_IN and the interaction between NAS_DELAY and TAXI_IN may be linear
+
+```{r}
+gam01 <- gam(ARR_DELAY ~ DAY_OF_MONTH +
+                   TAXI_IN +
+                   s(TAXI_OUT) +
+                   DEST +
+                   s(DEP_DELAY) +
+                   CARRIER_DELAY +
+                   NAS_DELAY +
+                   TAXI_IN*NAS_DELAY, data = flights)
+
+anova(gam00, gam01, test = "F")
+```
+
+based on anova test, the model with smoothing splines on TAXI_IN and the interaction term is a better fit
+
+## Model Diagnostics
+
+```{r}
+par(mfrow = c(2,2))
+gam.check(gam00)
+```
+
+## Test Error
+
+```{r}
+gam_preds <- predict.gam(gam00, newdata = test)
+#mean((test$ARR_DELAY - gam_preds)^2)
+```
 
