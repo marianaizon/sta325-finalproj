@@ -51,32 +51,66 @@ flights
 
 ## Taxi Histograms
 
-```{r}
+```{r, warning=FALSE}
 p00 <- ggplot(data = flights, aes(x = TAXI_IN)) +
-  geom_histogram(binwidth = 5, fill = "#E81828", color = "#002D72") +
+  geom_histogram(binwidth = 5, fill = "#FFFF00", color = "#002D72", alpha = .7) +
   labs(x = "Time to Taxi In",
-       title = "Histogram of TAXI_IN")
+       y = "Frequency",
+       title = "Histogram of TAXI_IN") + 
+  theme(plot.title = element_text(size = 10,hjust = 0.5),
+        plot.subtitle = element_text(hjust = 0.5),
+        axis.title.x.bottom = element_text(size = 8, face = "italic"),
+        axis.title.y.left = element_text(size = 8))
+  
+
+ # ggplot(train_data, mapping = aes(x = St2)) +
+ #  geom_histogram(binwidth =2.5, fill = "#FFFF00", color = "#002D72", alpha = .7) +
+ #  labs(x = xlab(bquote('St^2')),
+ #      # xlab(bquote('Assimilation ('*mu~ 'mol' ~CO[2]~ m^-2~s^-1*')')),
+ #       y = "Frequency",
+ #       title = "Histogram of Stokes Number, Squared") +
+ #  theme(plot.title = element_text(size = 10,hjust = 0.5),
+ #        plot.subtitle = element_text(hjust = 0.5),
+ #        axis.title.x.bottom = element_text(size = 8, face = "italic"),
+ #        axis.title.y.left = element_text(size = 8))
+
 
 p01 <- ggplot(data = flights, aes(x = TAXI_OUT)) +
-  geom_histogram(binwidth = 5, fill = "#E81828", color = "#002D72") +
+  geom_histogram(binwidth = 5, fill = "#FFFF00", color = "#002D72", alpha = .7) +
   labs(x = "Time to Taxi Out",
-       title = "Histogram of TAXI_OUT")
+       y = "Frequency",
+       title = "Histogram of TAXI_OUT") + 
+  theme(plot.title = element_text(size = 10,hjust = 0.5),
+        plot.subtitle = element_text(hjust = 0.5),
+        axis.title.x.bottom = element_text(size = 8, face = "italic"),
+        axis.title.y.left = element_text(size = 8))
+  
 
-grid.arrange(p00, p01, nrow = 1)
+grid.arrange(p01, p00, nrow = 1)
 ```
 
 ## Days of Month and Week
 
 ```{r}
 p02 <- ggplot(data = flights, aes(x = DAY_OF_MONTH)) +
-  geom_histogram(binwidth = 1, fill = "#E81828", color = "#002D72") +
+  geom_histogram(binwidth = 1, fill = "#E81828", color = "#002D72", alpha = .8) +
   labs(x = "Days of Month",
-       title = "Histogram of Days of Month")
+       y = "Frequency",
+       title = "Histogram of Days of Month") +
+    theme(plot.title = element_text(size = 10,hjust = 0.5),
+        plot.subtitle = element_text(hjust = 0.5),
+        axis.title.x.bottom = element_text(size = 8, face = "italic"),
+        axis.title.y.left = element_text(size = 8))
 
 p03 <- ggplot(data = flights, aes(x = DAY_OF_WEEK)) +
-  geom_histogram(binwidth = 1, fill = "#E81828", color = "#002D72") +
+  geom_histogram(binwidth = 1, fill = "#E81828", color = "#002D72", alpha = .8) +
   labs(x = "Day of Week",
-       title = "Histogram of Days of Week")
+       y = "Frequency",
+       title = "Histogram of Days of Week") +
+    theme(plot.title = element_text(size = 10,hjust = 0.5),
+        plot.subtitle = element_text(hjust = 0.5),
+        axis.title.x.bottom = element_text(size = 8, face = "italic"),
+        axis.title.y.left = element_text(size = 8))
 
 grid.arrange(p02, p03, nrow = 1)
 ```
@@ -87,19 +121,28 @@ Origin is all JFK, but we could consider the different destination locations.
 
 ```{r}
 ggplot(data = flights, aes(x = DEST)) +
-  geom_bar(fill = "#E81828", color = "#002D72") +
+  geom_bar(fill = "#40E0D0", color = "#002D72", alpha = .7) +
   labs(x = "Destinations",
-       title = "Bar Plot of Destinations")
+       title = "Bar Plot of Destinations") + 
+  theme(plot.title = element_text(size = 12,hjust = 0.5),
+        plot.subtitle = element_text(hjust = 0.5),
+        axis.title.x.bottom = element_text(size = 8, face = "italic"),
+        axis.title.y.left = element_text(size = 8))
 ```
 
 ## Depart Delay Histogram
 
-```{r}
+```{r, warning = FALSE}
 ggplot(data = flights, aes(x = DEP_DELAY)) +
-  geom_histogram(binwidth = 4, fill = "#E81828", color = "#002D72") +
+  geom_histogram(binwidth = 4, fill = "#e9c2ed", color = "#002D72", alpha = 0.7) +
   xlim(-25, 50) +
   labs(x = "Departure Delay",
-       title = "Histogram of DEP_DELAY")
+       y = "Frequency",
+       title = "Histogram of DEP_DELAY") +
+  theme(plot.title = element_text(size = 12,hjust = 0.5),
+        plot.subtitle = element_text(hjust = 0.5),
+        axis.title.x.bottom = element_text(size = 8, face = "italic"),
+        axis.title.y.left = element_text(size = 8))
 ```
 
 ```{r}
@@ -141,12 +184,17 @@ Overall, the categorical delay predictors I would think we could use are: Carrie
 
 I just made it a different color so that when I scroll up to look at distributions I can easily tell the response from predictors (definitely can change at the end).
 
-```{r}
+```{r, warning = FALSE}
 ggplot(data = flights, aes(x = ARR_DELAY)) +
-  geom_histogram(binwidth = 20, fill = "#002D72", color = "#E81828" ) +
+  geom_histogram(binwidth = 20, fill = "#002D72", color = "#E81828", alpha = 0.8) +
   xlim(-100, 150) +
   labs(x = "Arrival Delay",
-       title = "Histogram of ARR_DELAY")
+       y = "Frequency",
+       title = "Histogram of ARR_DELAY") + 
+  theme(plot.title = element_text(size = 12,hjust = 0.5),
+        plot.subtitle = element_text(hjust = 0.5),
+        axis.title.x.bottom = element_text(size = 8, face = "italic"),
+        axis.title.y.left = element_text(size = 8))
 ```
 
 
