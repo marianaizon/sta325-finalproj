@@ -16,6 +16,7 @@ library(dplyr)
 library(tidyverse)
 library(gridExtra)
 library(mgcv)
+library(patchwork)
 ```
 
 
@@ -35,9 +36,8 @@ flights <- flights %>%
                                TRUE ~ 0),
          SECURITY_DELAY = case_when(SECURITY_DELAY > 0 ~ 1,
                                     TRUE ~ 0),
-         LATE_AIRCRAFT_DELAY = case_when(
-           LATE_AIRCRAFT_DELAY > 0 ~ 1,
-           TRUE ~ 0))
+         LATE_AIRCRAFT_DELAY = case_when(LATE_AIRCRAFT_DELAY > 0 ~ 1,
+                                         TRUE ~ 0))
 
 
 
@@ -52,7 +52,7 @@ flights
 ## Taxi Histograms
 
 ```{r, warning=FALSE}
-p00 <- ggplot(data = flights, aes(x = TAXI_IN)) +
+pTAXI_IN <- ggplot(data = flights, aes(x = TAXI_IN)) +
   geom_histogram(binwidth = 5, fill = "#FFFF00", color = "#002D72", alpha = .7) +
   labs(x = "Time to Taxi In",
        y = "Frequency",
@@ -62,6 +62,7 @@ p00 <- ggplot(data = flights, aes(x = TAXI_IN)) +
         axis.title.x.bottom = element_text(size = 8, face = "italic"),
         axis.title.y.left = element_text(size = 8))
   
+
 
  # ggplot(train_data, mapping = aes(x = St2)) +
  #  geom_histogram(binwidth =2.5, fill = "#FFFF00", color = "#002D72", alpha = .7) +
@@ -75,7 +76,7 @@ p00 <- ggplot(data = flights, aes(x = TAXI_IN)) +
  #        axis.title.y.left = element_text(size = 8))
 
 
-p01 <- ggplot(data = flights, aes(x = TAXI_OUT)) +
+pTAXI_OUT <- ggplot(data = flights, aes(x = TAXI_OUT)) +
   geom_histogram(binwidth = 5, fill = "#FFFF00", color = "#002D72", alpha = .7) +
   labs(x = "Time to Taxi Out",
        y = "Frequency",
@@ -86,7 +87,32 @@ p01 <- ggplot(data = flights, aes(x = TAXI_OUT)) +
         axis.title.y.left = element_text(size = 8))
   
 
-grid.arrange(p01, p00, nrow = 1)
+flights$log_TAXI_OUT <- log(flights$TAXI_OUT)
+flights$log_TAXI_IN <- log(flights$TAXI_IN)
+
+plog_TAXI_OUT <- ggplot(data = flights, aes(x = log_TAXI_OUT)) +
+  geom_histogram(fill = "#FFFF00", color = "#002D72", alpha = .7) +
+  labs(x = "Time to Taxi Out",
+       y = "Frequency",
+       title = "Histogram of log(TAXI_OUT)") + 
+  theme(plot.title = element_text(size = 10,hjust = 0.5),
+        plot.subtitle = element_text(hjust = 0.5),
+        axis.title.x.bottom = element_text(size = 8, face = "italic"),
+        axis.title.y.left = element_text(size = 8))
+
+
+plog_TAXI_IN <- ggplot(data = flights, aes(x = log_TAXI_IN)) +
+  geom_histogram(fill = "#FFFF00", color = "#002D72", alpha = .7) +
+  labs(x = "Time to Taxi Out",
+       y = "Frequency",
+       title = "Histogram of Log(TAXI_IN)") + 
+  theme(plot.title = element_text(size = 10,hjust = 0.5),
+        plot.subtitle = element_text(hjust = 0.5),
+        axis.title.x.bottom = element_text(size = 8, face = "italic"),
+        axis.title.y.left = element_text(size = 8))
+
+pTAXI_IN + plog_TAXI_IN
+pTAXI_OUT + plog_TAXI_OUT
 ```
 
 ## Days of Month and Week
@@ -130,6 +156,23 @@ ggplot(data = flights, aes(x = DEST)) +
         axis.title.y.left = element_text(size = 8))
 ```
 
+## Airlines
+
+```{r}
+ggplot(data = flights, aes(x = OP_CARRIER)) +
+  geom_bar(fill = "#40E0D0", color = "#002D72", alpha = .7) +
+  labs(x = "Airline",
+       title = "Bar Plot of Airlines") + 
+  theme(plot.title = element_text(size = 12,hjust = 0.5),
+        plot.subtitle = element_text(hjust = 0.5),
+        axis.title.x.bottom = element_text(size = 8, face = "italic"),
+        axis.title.y.left = element_text(size = 8))
+
+
+ggplot(data = flights, aes(x = DEST, fill = OP_CARRIER)) +
+  geom_bar()
+```
+
 ## Depart Delay Histogram
 
 ```{r, warning = FALSE}
@@ -143,6 +186,7 @@ ggplot(data = flights, aes(x = DEP_DELAY)) +
         plot.subtitle = element_text(hjust = 0.5),
         axis.title.x.bottom = element_text(size = 8, face = "italic"),
         axis.title.y.left = element_text(size = 8))
+
 ```
 
 ```{r}
@@ -212,6 +256,15 @@ p7 <- ggplot(data = flights, aes(y = ARR_DELAY, x = TAXI_OUT)) +
   labs(title = "Arrival Delay vs Taxi_Out")
 
 grid.arrange(p6,p7, nrow = 1)
+
+plog6 <- ggplot(data = flights, aes(y = ARR_DELAY, x = log_TAXI_IN)) +
+  geom_point() +
+  labs(title = "Arrival Delay vs log(Taxi_In)")
+
+plog7 <- ggplot(data = flights, aes(y = ARR_DELAY, x = log_TAXI_OUT)) +
+  geom_point() +
+  labs(title = "Arrival Delay vs log(Taxi_Out)")
+grid.arrange(plog6,plog7, nrow = 1)
 ```
 
 These plots above suggest that we may want to transform the variables at some point. 
@@ -251,6 +304,24 @@ p11 <- ggplot(data = flights, aes(y = ARR_DELAY, group = DAY_OF_MONTH)) +
 grid.arrange(p10, p11, nrow = 2)
 ```
 
+
+## Further Data Cleaning
+
+```{r destination-change}
+# take only SFO/LAX since all 4 carriers fly there
+flights <- flights %>% 
+  filter(DEST == "SFO" | DEST == "LAX") %>% 
+  mutate(TYPE_DELAY = case_when(NAS_DELAY == 1 ~ "NAS",
+                                CARRIER_DELAY == 1 ~ "CARRIER",
+                                LATE_AIRCRAFT_DELAY == 1 ~ "LATE_AIRCRAFT",
+                                TRUE ~ "No Delay"))
+
+ggplot(data = flights, aes(x = TYPE_DELAY)) +
+  geom_bar()
+
+unique(flights$TYPE_DELAY)
+```
+
 # SPLITTING DATA
 
 ```{r}
@@ -262,11 +333,76 @@ train <- flights %>%
 test <- anti_join(flights, train, by = "id")
 ```
 
+
+
+
 # LINEAR MODELS
 
 Variables that I think we could explore: department delay time, days of month, days of week, taxi-in, taxi-out, destination, Carrier Delay, NAS Delay, and Late Aircraft Delay.
 
 ### Full Model 
+
+```{r new-attempt-lm}
+lm.01 <- lm(ARR_DELAY ~ DEP_DELAY + DAY_OF_WEEK + OP_CARRIER + DEST + CRS_DEP_TIME + CRS_ARR_TIME + log_TAXI_OUT + log_TAXI_IN + TYPE_DELAY, flights)
+
+#plot(lm.01)
+#summary(lm.01)
+
+library(MASS)
+step_model <- stepAIC(lm.01, direction = "backward", trace = FALSE)
+#summary(step_model)
+
+lm.02 <- lm(ARR_DELAY ~ DEP_DELAY + OP_CARRIER + DEST + CRS_DEP_TIME + CRS_ARR_TIME + log_TAXI_OUT + log_TAXI_IN + TYPE_DELAY + OP_CARRIER:DEST, flights)
+#summary(lm.02)
+#anova(step_model, lm.02)
+
+lm.03 <- lm(ARR_DELAY ~ DEP_DELAY + OP_CARRIER + DEST + CRS_DEP_TIME + CRS_ARR_TIME + log_TAXI_OUT + log_TAXI_IN + TYPE_DELAY + OP_CARRIER:DEST + DEST:log_TAXI_IN, flights)
+
+#anova(lm.02, lm.03)
+
+
+lm.04 <- lm(ARR_DELAY ~ DEP_DELAY + OP_CARRIER + DEST + CRS_DEP_TIME + CRS_ARR_TIME + log_TAXI_OUT + log_TAXI_IN + TYPE_DELAY + OP_CARRIER:DEST + DEST:log_TAXI_IN + CRS_ARR_TIME:log_TAXI_IN, flights)
+
+#anova(lm.03, lm.04)
+
+final_model <- lm(ARR_DELAY ~ DEP_DELAY + OP_CARRIER + DEST + CRS_DEP_TIME + CRS_ARR_TIME + log_TAXI_OUT + log_TAXI_IN + TYPE_DELAY + OP_CARRIER:DEST + DEST:log_TAXI_IN + CRS_ARR_TIME:log_TAXI_IN + log_TAXI_OUT:DEP_DELAY, flights)
+
+anova(lm.04, final_model)
+summary(final_model)
+plot(final_model)
+
+## SIGNIFICANT INTERACTIONS
+#OP_CARRIER:DEST
+#DEST:log_TAXI_IN
+#CRS_DEP_TIME:DEST (***** makes zero intuitive sense - might not wanna do this)
+#CRS_ARR_TIME:log_TAXI_IN
+#log_TAXI_OUT:DEP_DELAY
+
+
+#log_TAXI_OUT:CRS_DEP_TIME (verrrrrry close to 0.05)
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 First, let's just fit a full linear model with all the variables we would like to explore. 
 
@@ -393,6 +529,32 @@ plot(current_model)
 ```
 
 The diagnostic plots above suggest that this model decently satisfies the necessary conditions to assume a linear regression.
+
+
+## Response (Box-Cox) Transformation
+```{r transforming-response-variable}
+## AFTER SELECTED MODEL
+library(EnvStats)
+
+# bc_model <- boxcox(final_model, optimize = TRUE)
+# bc_lambda <- bc_model$lambda
+# bc_lambda
+# plot(bc_model)
+```
+
+```{r bc-transform-data}
+# add Box-Cox transform to data
+# train_data <- train_data %>%
+#   mutate(bc_R_moment_1 = ((R_moment_1^bc_lambda) - 1)/bc_lambda)
+# 
+# hist(train_data$bc_R_moment_1)
+```
+
+
+
+
+
+
 
 ### Test Error
 
