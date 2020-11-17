@@ -334,8 +334,6 @@ test <- anti_join(flights, train, by = "id")
 ```
 
 
-
-
 # LINEAR MODELS
 
 Variables that I think we could explore: department delay time, days of month, days of week, taxi-in, taxi-out, destination, Carrier Delay, NAS Delay, and Late Aircraft Delay.
@@ -383,25 +381,6 @@ plot(final_model)
 
 
 ```
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 First, let's just fit a full linear model with all the variables we would like to explore. 
@@ -551,19 +530,12 @@ library(EnvStats)
 ```
 
 
-
-
-
-
-
 ### Test Error
 
 ```{r}
 lm_preds <- predict(current_model, test)
-#mean((test$ARR_DELAY - lm_preds)^2)
+sum((test$ARR_DELAY - lm_preds)^2, na.rm=T)/328
 ```
-
-***when all of the (test$ARR_DELAY - lm_preds)^2 are added up we get NA so not sure what to do abt that
 
 # GAM MODEL
 
@@ -573,13 +545,15 @@ fit a gam model with numerical variables on a smoothing spline and including the
 
 ```{r}
 gam00 <- gam(ARR_DELAY ~ DAY_OF_MONTH +
+                   DAY_OF_WEEK +
                    s(TAXI_IN) +
                    s(TAXI_OUT) +
                    DEST +
                    s(DEP_DELAY) +
                    CARRIER_DELAY +
                    NAS_DELAY +
-                   s(TAXI_IN, by = NAS_DELAY), data = flights)
+                   LATE_AIRCRAFT_DELAY +
+                   s(TAXI_IN, by = NAS_DELAY), data = train)
 
 summary(gam00)
 ```
@@ -595,18 +569,39 @@ TAXI_IN and the interaction between NAS_DELAY and TAXI_IN may be linear
 
 ```{r}
 gam01 <- gam(ARR_DELAY ~ DAY_OF_MONTH +
+                   DAY_OF_WEEK +
                    TAXI_IN +
                    s(TAXI_OUT) +
                    DEST +
                    s(DEP_DELAY) +
                    CARRIER_DELAY +
                    NAS_DELAY +
-                   TAXI_IN*NAS_DELAY, data = flights)
+                   LATE_AIRCRAFT_DELAY +
+                   TAXI_IN*NAS_DELAY, data = train)
 
 anova(gam00, gam01, test = "F")
 ```
 
 based on anova test, the model with smoothing splines on TAXI_IN and the interaction term is a better fit
+
+## More Anova
+
+DAY_OF_WEEK and DEST have very high p-values, so let's try an anova test without including them
+
+```{r}
+gam02 <- gam(ARR_DELAY ~ DAY_OF_MONTH +
+                   s(TAXI_IN) +
+                   s(TAXI_OUT) +
+                   s(DEP_DELAY) +
+                   CARRIER_DELAY +
+                   NAS_DELAY +
+                   LATE_AIRCRAFT_DELAY +
+                   s(TAXI_IN, by = NAS_DELAY), data = train)
+
+anova(gam00, gam02, test = "F")
+```
+
+based on the anova test, the model including DAY_OF_WEEK and DEST is a better fit
 
 ## Model Diagnostics
 
@@ -619,6 +614,6 @@ gam.check(gam00)
 
 ```{r}
 gam_preds <- predict.gam(gam00, newdata = test)
-#mean((test$ARR_DELAY - gam_preds)^2)
+sum((test$ARR_DELAY - gam_preds)^2, na.rm=T)/328
 ```
 
