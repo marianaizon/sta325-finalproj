@@ -341,7 +341,7 @@ Variables that I think we could explore: department delay time, days of month, d
 ### Full Model 
 
 ```{r new-attempt-lm}
-lm.01 <- lm(ARR_DELAY ~ DEP_DELAY + DAY_OF_WEEK + OP_CARRIER + DEST + CRS_DEP_TIME + CRS_ARR_TIME + log_TAXI_OUT + log_TAXI_IN + TYPE_DELAY, flights)
+lm.01 <- lm(ARR_DELAY ~ DEP_DELAY + DAY_OF_WEEK + OP_CARRIER + DEST + CRS_DEP_TIME + CRS_ARR_TIME + log_TAXI_OUT + log_TAXI_IN + TYPE_DELAY, train)
 
 #plot(lm.01)
 #summary(lm.01)
@@ -350,22 +350,19 @@ library(MASS)
 step_model <- stepAIC(lm.01, direction = "backward", trace = FALSE)
 #summary(step_model)
 
-lm.02 <- lm(ARR_DELAY ~ DEP_DELAY + OP_CARRIER + DEST + CRS_DEP_TIME + CRS_ARR_TIME + log_TAXI_OUT + log_TAXI_IN + TYPE_DELAY + OP_CARRIER:DEST, flights)
+lm.02 <- lm(ARR_DELAY ~ DEP_DELAY + OP_CARRIER + DEST + CRS_DEP_TIME  + log_TAXI_OUT + log_TAXI_IN + TYPE_DELAY + OP_CARRIER:DEST, train)
 #summary(lm.02)
 #anova(step_model, lm.02)
 
-lm.03 <- lm(ARR_DELAY ~ DEP_DELAY + OP_CARRIER + DEST + CRS_DEP_TIME + CRS_ARR_TIME + log_TAXI_OUT + log_TAXI_IN + TYPE_DELAY + OP_CARRIER:DEST + DEST:log_TAXI_IN, flights)
+lm.03 <- lm(ARR_DELAY ~ DEP_DELAY + OP_CARRIER + DEST + CRS_DEP_TIME  + log_TAXI_OUT + log_TAXI_IN + TYPE_DELAY + OP_CARRIER:DEST + DEST:log_TAXI_IN, train)
 
 #anova(lm.02, lm.03)
 
 
-lm.04 <- lm(ARR_DELAY ~ DEP_DELAY + OP_CARRIER + DEST + CRS_DEP_TIME + CRS_ARR_TIME + log_TAXI_OUT + log_TAXI_IN + TYPE_DELAY + OP_CARRIER:DEST + DEST:log_TAXI_IN + CRS_ARR_TIME:log_TAXI_IN, flights)
+final_model <- lm(ARR_DELAY ~ DEP_DELAY + OP_CARRIER + DEST + CRS_DEP_TIME  + log_TAXI_OUT + log_TAXI_IN + TYPE_DELAY + OP_CARRIER:DEST + DEST:log_TAXI_IN+log_TAXI_OUT:DEP_DELAY, train)
 
-#anova(lm.03, lm.04)
+anova(lm.03, final_model)
 
-final_model <- lm(ARR_DELAY ~ DEP_DELAY + OP_CARRIER + DEST + CRS_DEP_TIME + CRS_ARR_TIME + log_TAXI_OUT + log_TAXI_IN + TYPE_DELAY + OP_CARRIER:DEST + DEST:log_TAXI_IN + CRS_ARR_TIME:log_TAXI_IN + log_TAXI_OUT:DEP_DELAY, flights)
-
-anova(lm.04, final_model)
 summary(final_model)
 plot(final_model)
 
@@ -378,8 +375,10 @@ plot(final_model)
 
 
 #log_TAXI_OUT:CRS_DEP_TIME (verrrrrry close to 0.05)
-
-
+library(broom)
+final_linear_preds <- predict(final_model, train)
+linear_MSE <- sum((final_linear_preds-train$ARR_DELAY)^2, na.rm=T)/328
+linear_MSE
 ```
 
 
@@ -397,7 +396,9 @@ full_model <- lm(ARR_DELAY ~ DAY_OF_MONTH +
                    LATE_AIRCRAFT_DELAY, data = train)
 
 summary(full_model)
-
+full_model_preds <- predict(full_model, train)
+linear_MSE <- sum((full_model_preds-train$ARR_DELAY)^2, na.rm=T)/328
+linear_MSE
 ```
 
 
@@ -617,3 +618,92 @@ gam_preds <- predict.gam(gam00, newdata = test)
 sum((test$ARR_DELAY - gam_preds)^2, na.rm=T)/328
 ```
 
+# TREES
+
+## Random Forests
+
+```{r}
+library(tree)
+library(randomForest)
+```
+
+By default, ``randomForest()`` uses $p/3$ variables when building a random forest of regression trees.
+
+```{r}
+set.seed(1)
+rf.delay <- randomForest(ARR_DELAY ~ DEP_DELAY + OP_CARRIER + DEST + 
+                           CRS_DEP_TIME + CRS_ARR_TIME + log_TAXI_OUT + 
+                           log_TAXI_IN + TYPE_DELAY + OP_CARRIER:DEST + 
+                           DEST:log_TAXI_IN + CRS_ARR_TIME:log_TAXI_IN + 
+                           log_TAXI_OUT:DEP_DELAY,
+                   data = train, na.action = na.omit, importance = TRUE,
+                   ntree=10000)
+yhat.rf <- predict(rf.delay, newdata = test)
+rf.MSE <- sum((test$ARR_DELAY - yhat.rf)^2, na.rm=T)/328
+rf.MSE
+```
+
+Using the ``importance()`` function, we can view the importance of each variable.
+
+```{r}
+importance(rf.delay)
+```
+
+Two measures of variable importance are reported.  The former is based on the mean decrease in accuracy in predictions on the out of bag samples when a given variable is excluded from the model.  The latter is a measure of the total decrease in node impurity that results from splits over that variable, averaged over all trees (this was plotted in Figure 8.9 in the text).  In the case of regression trees, the node impurity is measured by the training RSS and for classification trees by the deviance.  Plots of these importance measures can be produced using the ``varImpPlot()`` function.
+
+```{r}
+varImpPlot(rf.delay)
+```
+
+## 4. Boosting 
+
+Here we use the ``gbm()`` package, and within it the ``gbm()`` function, to fit boosted regression trees to the ``train`` data set. We run ``gbm()`` with the option ``distribution = "gaussian"`` since this is a regression problem. The argument ``n.trees = 5000`` indicates that we want 5000 trees, and the option ``interaction.depth = 4`` limits the depth of each tree.
+
+```{r}
+# library(gbm)
+# set.seed(1)
+# boost.boston <- gbm(ARR_DELAY ~ DAY_OF_MONTH +
+#                    TAXI_IN +
+#                    TAXI_OUT +
+#                    DEP_DELAY +
+#                    CARRIER_DELAY +
+#                    NAS_DELAY +
+#                    LATE_AIRCRAFT_DELAY,
+#                    data = train, distribution = "gaussian",
+#                    n.trees=1000, interaction.depth=1, shrinkage=0.001, cv.folds=10)
+```
+
+The ``summary()`` function also provides a relative influence plot and also outputs the relative influence statistics.
+
+```{r}
+#summary(boost.boston)
+```
+
+We see that ``lstat`` and ``rm`` are by far the most important variables. We can also produce *partial dependence plots* for these two variables.  These plots illustrate the marginal effect of the selected variables on the response after ``integrating`` out the other variables.  In this case, as we might expect, median house prices are increasing with ``rm`` and decreasing with ``lstat``.
+
+```{r}
+# par(mfrow = c(1,2))
+# plot(boost.boston, i = "rm")
+# plot(boost.boston, i = "lstat")
+```
+
+We now use the boosted model to predict ``medv`` on the test set:
+
+```{r}
+# yhat.boost <- predict(boost.boston, newdata = Boston[-train,],
+#                       n.trees = 5000)
+# mean((yhat.boost - boston.test)^2)
+```
+
+The test MSE obtained is 11.8; similar to the test MSE for random forests and superior to that for bagging.  If we want to, we can perform boosting with a different value of the shrinkage parameter $\lambda$ in  Equation 8.10.  The default value is 0.001, but this is easily modified. Here, we take $\lambda = 0.2$.
+
+```{r}
+# boost.boston <- gbm(medv~., data = Boston[train,],
+#                     distribution = "gaussian", n.trees = 5000,
+#                     interaction.depth = 4,
+#                     shrinkage = 0.2,
+#                     verbose =FALSE)
+# yhat.boost <- predict(boost.boston, newdata = Boston[-train,],
+#                       n.trees = 5000)
+# mean((yhat.boost - boston.test)^2)
+```
