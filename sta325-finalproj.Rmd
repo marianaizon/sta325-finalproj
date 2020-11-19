@@ -239,6 +239,9 @@ ggplot(data = flights, aes(x = ARR_DELAY)) +
         plot.subtitle = element_text(hjust = 0.5),
         axis.title.x.bottom = element_text(size = 8, face = "italic"),
         axis.title.y.left = element_text(size = 8))
+
+# 2-parameter BC transformation
+## can apply to GAM
 ```
 
 
