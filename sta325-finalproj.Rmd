@@ -21,12 +21,15 @@ library(patchwork)
 
 
 ```{r load-clean-data, warning=FALSE, message=FALSE}
+# read data
 flights <- read_csv("data/flights.csv")
 
+# find unique airlines, destinations, and types of delays
 unique(flights$OP_CARRIER)
 unique(flights$DEST)
 class(flights$CARRIER_DELAY)
 
+# mutate delays and filter out NA arrival delays
 flights <- flights %>% 
   mutate(CARRIER_DELAY = case_when(CARRIER_DELAY > 0 ~ 1,
                                    TRUE ~ 0),
@@ -43,6 +46,7 @@ flights <- flights %>%
 ```
 
 ```{r}
+# glimpse data
 flights
 ```
 
@@ -51,6 +55,7 @@ flights
 ## Taxi Histograms
 
 ```{r, warning=FALSE}
+# plot untransformed predictor taxi_in
 pTAXI_IN <- ggplot(data = flights, aes(x = TAXI_IN)) +
   geom_histogram(binwidth = 5, fill = "#FFFF00", color = "#002D72", alpha = .7) +
   labs(x = "Time to Taxi In",
@@ -61,20 +66,7 @@ pTAXI_IN <- ggplot(data = flights, aes(x = TAXI_IN)) +
         axis.title.x.bottom = element_text(size = 8, face = "italic"),
         axis.title.y.left = element_text(size = 8))
   
-
-
- # ggplot(train_data, mapping = aes(x = St2)) +
- #  geom_histogram(binwidth =2.5, fill = "#FFFF00", color = "#002D72", alpha = .7) +
- #  labs(x = xlab(bquote('St^2')),
- #      # xlab(bquote('Assimilation ('*mu~ 'mol' ~CO[2]~ m^-2~s^-1*')')),
- #       y = "Frequency",
- #       title = "Histogram of Stokes Number, Squared") +
- #  theme(plot.title = element_text(size = 10,hjust = 0.5),
- #        plot.subtitle = element_text(hjust = 0.5),
- #        axis.title.x.bottom = element_text(size = 8, face = "italic"),
- #        axis.title.y.left = element_text(size = 8))
-
-
+# plot untransformed predictor taxi_out
 pTAXI_OUT <- ggplot(data = flights, aes(x = TAXI_OUT)) +
   geom_histogram(binwidth = 5, fill = "#FFFF00", color = "#002D72", alpha = .7) +
   labs(x = "Time to Taxi Out",
@@ -85,10 +77,11 @@ pTAXI_OUT <- ggplot(data = flights, aes(x = TAXI_OUT)) +
         axis.title.x.bottom = element_text(size = 8, face = "italic"),
         axis.title.y.left = element_text(size = 8))
   
-
+# log transform taxi_in and taxi_out
 flights$log_TAXI_OUT <- log(flights$TAXI_OUT)
 flights$log_TAXI_IN <- log(flights$TAXI_IN)
 
+# plot log transformed taxi_out
 plog_TAXI_OUT <- ggplot(data = flights, aes(x = log_TAXI_OUT)) +
   geom_histogram(fill = "#FFFF00", color = "#002D72", alpha = .7) +
   labs(x = "Time to Taxi Out",
@@ -99,7 +92,7 @@ plog_TAXI_OUT <- ggplot(data = flights, aes(x = log_TAXI_OUT)) +
         axis.title.x.bottom = element_text(size = 8, face = "italic"),
         axis.title.y.left = element_text(size = 8))
 
-
+# plot log transform taxi_in
 plog_TAXI_IN <- ggplot(data = flights, aes(x = log_TAXI_IN)) +
   geom_histogram(fill = "#FFFF00", color = "#002D72", alpha = .7) +
   labs(x = "Time to Taxi Out",
@@ -117,6 +110,7 @@ pTAXI_OUT + plog_TAXI_OUT
 ## Days of Month and Week
 
 ```{r}
+# plot predictor DAYS_OF_MONTH
 p02 <- ggplot(data = flights, aes(x = DAY_OF_MONTH)) +
   geom_histogram(binwidth = 1, fill = "#E81828", color = "#002D72", alpha = .8) +
   labs(x = "Days of Month",
@@ -127,6 +121,7 @@ p02 <- ggplot(data = flights, aes(x = DAY_OF_MONTH)) +
         axis.title.x.bottom = element_text(size = 8, face = "italic"),
         axis.title.y.left = element_text(size = 8))
 
+# plot predictor DAY_OF_WEEK
 p03 <- ggplot(data = flights, aes(x = DAY_OF_WEEK)) +
   geom_histogram(binwidth = 1, fill = "#E81828", color = "#002D72", alpha = .8) +
   labs(x = "Day of Week",
@@ -145,6 +140,7 @@ grid.arrange(p02, p03, nrow = 1)
 Origin is all JFK, but we could consider the different destination locations. 
 
 ```{r}
+# plot destinations in CA
 ggplot(data = flights, aes(x = DEST)) +
   geom_bar(fill = "#40E0D0", color = "#002D72", alpha = .7) +
   labs(x = "Destinations",
@@ -158,6 +154,7 @@ ggplot(data = flights, aes(x = DEST)) +
 ## Airlines
 
 ```{r}
+# plot airline carriers
 ggplot(data = flights, aes(x = OP_CARRIER)) +
   geom_bar(fill = "#40E0D0", color = "#002D72", alpha = .7) +
   labs(x = "Airline",
@@ -167,7 +164,7 @@ ggplot(data = flights, aes(x = OP_CARRIER)) +
         axis.title.x.bottom = element_text(size = 8, face = "italic"),
         axis.title.y.left = element_text(size = 8))
 
-
+# plot airlines by destination
 ggplot(data = flights, aes(x = DEST, fill = OP_CARRIER)) +
   geom_bar()
 ```
@@ -175,6 +172,7 @@ ggplot(data = flights, aes(x = DEST, fill = OP_CARRIER)) +
 ## Depart Delay Histogram
 
 ```{r, warning = FALSE}
+# plot DEP_DELAY
 ggplot(data = flights, aes(x = DEP_DELAY)) +
   geom_histogram(binwidth = 4, fill = "#e9c2ed", color = "#002D72", alpha = 0.7) +
   xlim(-25, 50) +
@@ -189,6 +187,7 @@ ggplot(data = flights, aes(x = DEP_DELAY)) +
 ```
 
 ```{r}
+# plot types of delays
 p1 <- ggplot(data = flights, aes(x = CARRIER_DELAY)) +
   geom_bar(fill = "#E81828", color = "#002D72") +
   labs(title = "Carrier Delay")
@@ -228,6 +227,7 @@ Overall, the categorical delay predictors I would think we could use are: Carrie
 I just made it a different color so that when I scroll up to look at distributions I can easily tell the response from predictors (definitely can change at the end).
 
 ```{r, warning = FALSE}
+# plot ARR_DELAY
 ggplot(data = flights, aes(x = ARR_DELAY)) +
   geom_histogram(binwidth = 20, fill = "#002D72", color = "#E81828", alpha = 0.8) +
   xlim(-100, 150) +
@@ -340,7 +340,7 @@ test <- anti_join(flights, train, by = "id")
 
 Variables that I think we could explore: department delay time, days of month, days of week, taxi-in, taxi-out, destination, Carrier Delay, NAS Delay, and Late Aircraft Delay.
 
-### Full Model 
+### Full Log-Transformed Model 
 
 ```{r new-attempt-lm}
 lm.01 <- lm(ARR_DELAY ~ DEP_DELAY + DAY_OF_WEEK + OP_CARRIER + DEST + CRS_DEP_TIME + CRS_ARR_TIME + log_TAXI_OUT + log_TAXI_IN + TYPE_DELAY, train)
@@ -383,55 +383,10 @@ log_linear_MSE <- sum((log_linear_preds-test$ARR_DELAY)^2, na.rm=T)/328
 log_linear_MSE
 ```
 
-```{r log-bc-trans}
-min(train$ARR_DELAY, na.rm = TRUE)
-
-train$adj_ARR_DELAY <- train$ARR_DELAY + 75
-min(train$adj_ARR_DELAY, na.rm = T)
-
-adj_log_linear_model <- lm(adj_ARR_DELAY ~ DEP_DELAY + OP_CARRIER + DEST + CRS_DEP_TIME  + log_TAXI_OUT + log_TAXI_IN + TYPE_DELAY + OP_CARRIER:DEST + DEST:log_TAXI_IN+log_TAXI_OUT:DEP_DELAY, train)
-
-library(EnvStats)
-bc_model <- boxcox(adj_log_linear_model, optimize = TRUE)
-bc_lambda <- bc_model$lambda
-bc_lambda
-plot(bc_model)
-
-# library(car)
-# hello <- boxCox(log_linear_model, family="yjPower", plotit = T)
-# hello
-```
-
-```{r}
-train <- train %>%
-  mutate(bc_adj_ARR_DELAY = ((adj_ARR_DELAY^bc_lambda) - 1)/bc_lambda)
-
-hist(train$bc_adj_ARR_DELAY)
-hist(train$adj_ARR_DELAY)
-```
-
-
 First, let's just fit a full linear model with all the variables we would like to explore. 
 
-```{r}
-full_model <- lm(ARR_DELAY ~ DAY_OF_MONTH + 
-                   DAY_OF_WEEK +
-                   TAXI_IN +
-                   TAXI_OUT +
-                   DEST +
-                   DEP_DELAY +
-                   CARRIER_DELAY +
-                   NAS_DELAY +
-                   LATE_AIRCRAFT_DELAY, data = train)
-
-summary(full_model)
-full_model_preds <- predict(full_model, test)
-linear_MSE <- sum((full_model_preds-test$ARR_DELAY)^2, na.rm=T)/328
-linear_MSE
-```
-
 ```{r take-2}
-full_model2 <- lm(ARR_DELAY ~ 
+full_model <- lm(ARR_DELAY ~ 
                     DEP_DELAY + 
                     DAY_OF_WEEK + 
                     OP_CARRIER + 
@@ -441,17 +396,22 @@ full_model2 <- lm(ARR_DELAY ~
                     TAXI_OUT + 
                     TAXI_IN + 
                     TYPE_DELAY, train)
+
+summary(full_model)
+full_model_preds <- predict(full_model, test)
+linear_MSE <- sum((full_model_preds-test$ARR_DELAY)^2, na.rm=T)/328
+linear_MSE
 ```
 
 ### Select Model with AIC
 
 ```{r, message=FALSE}
 library(MASS)
-step_model <- stepAIC(full_model2, trace = FALSE)
+step_model <- stepAIC(full_model, trace = FALSE)
 summary(step_model)
 ```
 
-The only variables that were removed were DAY_OF_WEEK and LATE_AIRCRAFT_DELAY. Let's continue using the step_model then. 
+The only variable that were removed was DAY_OF_WEEK. Let's continue using the step_model then. 
 
 ### Interactions
 
@@ -652,23 +612,23 @@ gam_MSE
 ## Boxcox Transformed GAM
 
 ```{r}
-gambc <- gam(bc_adj_ARR_DELAY ~ DAY_OF_MONTH +
-                   TAXI_IN +
-                   s(TAXI_OUT) +
-                   s(DEP_DELAY) +
-                   CARRIER_DELAY +
-                   NAS_DELAY +
-                   LATE_AIRCRAFT_DELAY +
-                   TAXI_IN, by = NAS_DELAY, data = train)
-
-summary(gambc)
+# gambc <- gam(bc_adj_ARR_DELAY ~ DAY_OF_MONTH +
+#                    TAXI_IN +
+#                    s(TAXI_OUT) +
+#                    s(DEP_DELAY) +
+#                    CARRIER_DELAY +
+#                    NAS_DELAY +
+#                    LATE_AIRCRAFT_DELAY +
+#                    TAXI_IN, by = NAS_DELAY, data = train)
+# 
+# summary(gambc)
 ```
 
 ### BC Model Diagnostics
 
 ```{r}
-par(mfrow = c(2,2))
-gam.check(gambc)
+# par(mfrow = c(2,2))
+# gam.check(gambc)
 ```
 
 ### BC Test Error
@@ -724,42 +684,43 @@ varImpPlot(rf.delay)
 Here we use the ``gbm()`` package, and within it the ``gbm()`` function, to fit boosted regression trees to the ``train`` data set. We run ``gbm()`` with the option ``distribution = "gaussian"`` since this is a regression problem. The argument ``n.trees = 10000`` indicates that we want 10000 trees, and the option ``interaction.depth = 1`` limits the depth of each tree.
 
 ```{r}
+errors <- 
 library(gbm)
 set.seed(1)
 train <- train %>%
   filter(!is.na(ARR_DELAY))
-#boost.delay <- gbm(ARR_DELAY ~ DAY_OF_MONTH +
- #                  TAXI_IN +
-  #                 TAXI_OUT +
-   #                DEP_DELAY +
-    #               CARRIER_DELAY +
-     #              NAS_DELAY +
-      #             LATE_AIRCRAFT_DELAY,
-       #            data = train, distribution = "gaussian",
-        #           n.trees=10000, interaction.depth=1, shrinkage=0.001, cv.folds=10)
+boost.delay <- gbm(ARR_DELAY ~ DAY_OF_MONTH +
+                 TAXI_IN +
+                TAXI_OUT +
+               DEP_DELAY +
+              CARRIER_DELAY +
+             NAS_DELAY +
+            LATE_AIRCRAFT_DELAY,
+           data = train, distribution = "gaussian",
+          n.trees=10000, interaction.depth=1, shrinkage=0.001, cv.folds=10)
 ```
 
 The ``summary()`` function also provides a relative influence plot and also outputs the relative influence statistics.
 
 ```{r}
-#summary(boost.delay)
+summary(boost.delay)
 ```
 
 We see that ``DEP_DELAY`` and ``DAY_OF_MONTH`` are by far the most important variables. We can also produce *partial dependence plots* for these two variables.  These plots illustrate the marginal effect of the selected variables on the response after ``integrating`` out the other variables.
 
 ```{r}
-#par(mfrow = c(1,2))
-#plot(boost.delay, i = "DEP_DELAY")
-#plot(boost.delay, i = "DAY_OF_MONTH")
+par(mfrow = c(1,2))
+plot(boost.delay, i = "DEP_DELAY")
+plot(boost.delay, i = "DAY_OF_MONTH")
 ```
 
 We now use the boosted model to predict ``ARR_DELAY`` on the test set:
 
 ```{r}
-#yhat.boost <- predict(boost.delay, newdata =test,
-#                       n.trees = 10000)
-#boost_MSE <- sum((test$ARR_DELAY-yhat.boost)^2, na.rm = T)/328
-#boost_MSE
+yhat.boost <- predict(boost.delay, newdata =test,
+                      n.trees = 10000)
+boost_MSE <- sum((test$ARR_DELAY-yhat.boost)^2, na.rm = T)/328
+boost_MSE
 ```
 
 The test MSE obtained is 11.8; similar to the test MSE for random forests and superior to that for bagging.  If we want to, we can perform boosting with a different value of the shrinkage parameter $\lambda$ in  Equation 8.10.  The default value is 0.001, but this is easily modified. Here, we take $\lambda = 0.2$.
