@@ -37,9 +37,8 @@ flights <- flights %>%
          SECURITY_DELAY = case_when(SECURITY_DELAY > 0 ~ 1,
                                     TRUE ~ 0),
          LATE_AIRCRAFT_DELAY = case_when(LATE_AIRCRAFT_DELAY > 0 ~ 1,
-                                         TRUE ~ 0))
-
-
+                                         TRUE ~ 0)) %>% 
+  filter(!is.na(ARR_DELAY))
 
 ```
 
@@ -364,6 +363,7 @@ lm.03 <- lm(ARR_DELAY ~ DEP_DELAY + OP_CARRIER + DEST + CRS_DEP_TIME  + log_TAXI
 
 log_linear_model <- lm(ARR_DELAY ~ DEP_DELAY + OP_CARRIER + DEST + CRS_DEP_TIME  + log_TAXI_OUT + log_TAXI_IN + TYPE_DELAY + OP_CARRIER:DEST + DEST:log_TAXI_IN+log_TAXI_OUT:DEP_DELAY, train)
 
+
 anova(lm.03, log_linear_model)
 
 summary(log_linear_model)
@@ -376,13 +376,33 @@ plot(log_linear_model)
 #CRS_ARR_TIME:log_TAXI_IN
 #log_TAXI_OUT:DEP_DELAY
 
-
 #log_TAXI_OUT:CRS_DEP_TIME (verrrrrry close to 0.05)
 library(broom)
 log_linear_preds <- predict(log_linear_model, test)
 log_linear_MSE <- sum((log_linear_preds-test$ARR_DELAY)^2, na.rm=T)/328
 log_linear_MSE
 ```
+
+```{r log-bc-trans}
+min(train$ARR_DELAY, na.rm = TRUE)
+
+train$adj_ARR_DELAY <- train$ARR_DELAY + 75
+min(train$adj_ARR_DELAY, na.rm = T)
+
+adj_log_linear_model <- lm(adj_ARR_DELAY ~ DEP_DELAY + OP_CARRIER + DEST + CRS_DEP_TIME  + log_TAXI_OUT + log_TAXI_IN + TYPE_DELAY + OP_CARRIER:DEST + DEST:log_TAXI_IN+log_TAXI_OUT:DEP_DELAY, train)
+
+library(EnvStats)
+bc_model <- boxcox(adj_log_linear_model, optimize = TRUE)
+bc_lambda <- bc_model$lambda
+bc_lambda
+plot(bc_model)
+
+# library(car)
+# hello <- boxCox(log_linear_model, family="yjPower", plotit = T)
+# hello
+```
+
+
 
 
 First, let's just fit a full linear model with all the variables we would like to explore. 
