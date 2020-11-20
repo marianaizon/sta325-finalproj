@@ -377,13 +377,13 @@ plot(log_linear_model)
 #log_TAXI_OUT:DEP_DELAY
 
 #log_TAXI_OUT:CRS_DEP_TIME (verrrrrry close to 0.05)
-library(broom)
-log_linear_preds <- predict(log_linear_model, test)
-log_linear_MSE <- sum((log_linear_preds-test$ARR_DELAY)^2, na.rm=T)/328
-log_linear_MSE
+# library(broom)
+# log_linear_preds <- predict(log_linear_model, test)
+# log_linear_MSE <- sum((log_linear_preds-test$ARR_DELAY)^2, na.rm=T)/328
+# log_linear_MSE
 ```
 
-First, let's just fit a full linear model with all the variables we would like to explore. 
+### Plain Linear Model 
 
 ```{r take-2}
 full_model <- lm(ARR_DELAY ~ 
@@ -397,135 +397,151 @@ full_model <- lm(ARR_DELAY ~
                     TAXI_IN + 
                     TYPE_DELAY, train)
 
-summary(full_model)
-full_model_preds <- predict(full_model, test)
-linear_MSE <- sum((full_model_preds-test$ARR_DELAY)^2, na.rm=T)/328
-linear_MSE
+# summary(full_model)
+# full_model_preds <- predict(full_model, test)
+# linear_MSE <- sum((full_model_preds-test$ARR_DELAY)^2, na.rm=T)/328
+# linear_MSE
 ```
 
-### Select Model with AIC
-
-```{r, message=FALSE}
+```{r, step-model, message=FALSE}
 library(MASS)
 step_model <- stepAIC(full_model, trace = FALSE)
-summary(step_model)
+#summary(step_model)
+plain_linear_model <- step_model
 ```
 
-The only variable that were removed was DAY_OF_WEEK. Let's continue using the step_model then. 
-
-### Interactions
-
-Because there are so many levels to Destination, I don't know if we should necessarily include an interaction with this categorical variable. My suggestion would be to find interactions with carrier_delay and nas_delay. 
-
+ 
 ```{r}
-p12 <- ggplot(data = train, aes(group = CARRIER_DELAY, y = TAXI_OUT)) +
-  geom_boxplot() +
-  labs(title = "Carrier Delay vs. Taxi_Out", 
-       x = "Carrier Delay")
-
-p13 <- ggplot(data = train, aes(group = CARRIER_DELAY, y = TAXI_IN)) +
-  geom_boxplot() +
-  labs(title = "Carrier Delay vs. Taxi_In", 
-       x = "Carrier Delay")
-
-grid.arrange(p12, p13, nrow = 1)
-```
-
-```{r}
-p14 <- ggplot(data = train, aes(group = NAS_DELAY, y = TAXI_OUT)) +
-  geom_boxplot() +
-  labs(title = "NAS Delay vs. Taxi_Out", 
-       x = "NAS Delay")
-
-p15 <- ggplot(data = train, aes(group = NAS_DELAY, y = TAXI_IN)) +
-  geom_boxplot() +
-  labs(title = "NAS Delay vs. Taxi_In", 
-       x = "NAS Delay")
-
-grid.arrange(p14, p15, nrow = 1)
-```
-
-
-```{r}
-step_model
-```
-
-
-From what I'm seeing in the plots above, there could be an interaction between taxi_out and carrier_delay. There also seems to be an interaction between NAS delay and taxi_out as well as a possible one between NAS delay and taxi_in. Let's test these three interactions below.
-
-```{r}
-# carrier vs taxi out
 # interaction1 <- lm(ARR_DELAY ~ 
 #                     DEP_DELAY + 
-#                     OP_CARRIER + 
-#                     DEST + 
-#                     CRS_DEP_TIME + 
-#                     CRS_ARR_TIME + 
-#                     TAXI_OUT + 
-#                     TAXI_IN + 
-#                     TYPE_DELAY +
-#                     
-#                      , data = train)
+#                      OP_CARRIER + 
+#                      DEST + 
+#                      CRS_DEP_TIME + 
+#                      CRS_ARR_TIME + 
+#                      TAXI_OUT + 
+#                      TAXI_IN + 
+#                      TYPE_DELAY,
+#                    data = train)
 
-```
+## op_carrier and crs_dep_time almost significant
 
-
-```{r}
 #anova(step_model, interaction1)
+
 ```
 
 ```{r}
-#anova(step_model, interaction2)
+plain_linear_model
+
+par(mfrow = c(2,2))
+plot(plain_linear_model)
+
+```
+
+## Adjusted Model No Log Transforms
+
+```{r}
+train$adj_ARR_DELAY = train$ARR_DELAY + 75
+adj_linear_model <- lm(adj_ARR_DELAY ~ 
+                    DEP_DELAY + 
+                     OP_CARRIER + 
+                     DEST + 
+                     CRS_DEP_TIME + 
+                     CRS_ARR_TIME + 
+                     TAXI_OUT + 
+                     TAXI_IN + 
+                     TYPE_DELAY,
+                   data = train)
+
+## op_carrier and crs_dep_time almost significant interaction
+
+```
+
+### Box-Cox
+
+```{r box-cox-notranslm}
+bc_model <- boxcox(adj_linear_model, optimize = TRUE)
+bc_lambda <- bc_model$lambda
+bc_lambda
+#plot(bc_model)
+
 ```
 
 ```{r}
-#anova(step_model, interaction3)
+library(dplyr)
+train <- train %>%
+  mutate(bc_adj_ARR_DELAY = ((adj_ARR_DELAY^bc_lambda) - 1)/bc_lambda)
+
+hist(train$adj_ARR_DELAY)
+hist(train$bc_adj_ARR_DELAY)
 ```
-
-It actually seems that interaction3: NAS_DELAY and TAXI_IN is the only interaction that is statistically significant in predicting ARR_DELAY. Let's make this model our current model:
-
-### Final Linear Model
+## Box-Cox Transformed Linear Model (No Transformed Predictors)
 
 ```{r}
-#EDIT!
-current_model <- step_model
-
-summary(current_model)
+bc_adj_linear_model <- lm(bc_adj_ARR_DELAY ~ 
+                    DEP_DELAY + 
+                     OP_CARRIER + 
+                     DEST + 
+                     CRS_DEP_TIME + 
+                     CRS_ARR_TIME + 
+                     TAXI_OUT + 
+                     TAXI_IN + 
+                     TYPE_DELAY,
+                   data = train)
+par(mfrow = c(2,2))
+plot(bc_adj_linear_model)
 ```
 
 ```{r}
 par(mfrow = c(2,2))
-plot(current_model)
+plot(adj_linear_model)
 ```
-
-The diagnostic plots above suggest that this model decently satisfies the necessary conditions to assume a linear regression.
-
-
-## Response (Box-Cox) Transformation
-```{r transforming-response-variable}
-# library(EnvStats)
-# 
-# bc_model <- boxcox(current_model, optimize = TRUE)
-# bc_lambda <- bc_model$lambda
-# bc_lambda
-# plot(bc_model)
-```
-
-```{r bc-transform-data}
-# add Box-Cox transform to data
-# train_data <- train_data %>%
-#   mutate(bc_R_moment_1 = ((R_moment_1^bc_lambda) - 1)/bc_lambda)
-# 
-# hist(train_data$bc_R_moment_1)
-```
-
-
 ### Test Error
 
+LOOKING AT:
+- log transformed predictors (taxi_in and taxi_out), interactions, no boxcox transformed response
+- model without any interactions or transformations: ENDED UP PERFORMING THE BEST!!!
+- box-cox transformed response, no interactions or predicted transformations
+
 ```{r}
-lm_preds <- predict(current_model, test)
-linear_model_MSE <- sum((test$ARR_DELAY - lm_preds)^2, na.rm=T)/328
-linear_model_MSE
+#min(test$ARR_DELAY)
+test$log_linear_preds <- predict(log_linear_model, test)
+
+hist(test$log_linear_preds)
+hist(test$ARR_DELAY)
+
+log_linear_MSE <- sum((log_linear_preds-test$ARR_DELAY)^2, na.rm=T)/328
+log_linear_MSE
+
+```
+
+```{r plain-model-test-error}
+#min(test$ARR_DELAY)
+test$plain_mlr_pred <- predict(plain_linear_model, test)
+
+hist(test$plain_mlr_pred)
+hist(test$ARR_DELAY)
+
+plain_linear_model_MSE <- sum((test$ARR_DELAY - test$plain_mlr_pred)^2, na.rm=T)/328
+plain_linear_model_MSE
+```
+
+
+```{r bc-model-test-error}
+#min(test$ARR_DELAY)
+test$adj_ARR_DELAY = test$ARR_DELAY + 77
+test$bc_adj_linear_preds <- predict(bc_adj_linear_model, test)
+#hist(test$bc_adj_linear_preds)
+
+
+test <- test %>%
+ mutate(adj_linear_preds = ((bc_adj_linear_preds*(bc_lambda) + 1)^(1/bc_lambda)))
+
+test$bc_mlr_pred = test$adj_linear_preds - 77
+hist(test$bc_mlr_pred)
+hist(test$ARR_DELAY)
+
+bc_adj_linear_model_MSE <- sum((test$ARR_DELAY - test$bc_mlr_pred)^2, na.rm=T)/328
+bc_adj_linear_model_MSE
 ```
 
 # GAM MODEL
