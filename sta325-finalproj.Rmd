@@ -459,6 +459,7 @@ adj_linear_model <- lm(adj_ARR_DELAY ~
 ### Box-Cox
 
 ```{r box-cox-notranslm}
+library(EnvStats)
 bc_model <- boxcox(adj_linear_model, optimize = TRUE)
 bc_lambda <- bc_model$lambda
 bc_lambda
@@ -509,7 +510,7 @@ test$log_linear_preds <- predict(log_linear_model, test)
 hist(test$log_linear_preds)
 hist(test$ARR_DELAY)
 
-log_linear_MSE <- sum((log_linear_preds-test$ARR_DELAY)^2, na.rm=T)/328
+log_linear_MSE <- sum((test$log_linear_preds-test$ARR_DELAY)^2, na.rm=T)/328
 log_linear_MSE
 
 ```
@@ -668,16 +669,19 @@ By default, ``randomForest()`` uses $p/3$ variables when building a random fores
 
 ```{r}
 set.seed(1)
-rf.delay <- randomForest(ARR_DELAY ~ DAY_OF_MONTH + 
+
+# optimal number of predictors (param = mtry) used = 2 based on CV
+rf.delay <- randomForest(ARR_DELAY ~ DAY_OF_MONTH +
                    TAXI_IN +
                    TAXI_OUT +
                    DEST +
                    DEP_DELAY +
                    CARRIER_DELAY +
-                   NAS_DELAY +
-                   NAS_DELAY*TAXI_IN,
+                   NAS_DELAY,
                    data = train, na.action = na.omit, importance = TRUE,
-                   ntree=10000)
+                   ntree=10000, mtry=2)
+
+# test error
 yhat.rf <- predict(rf.delay, newdata = test)
 rf.MSE <- sum((test$ARR_DELAY - yhat.rf)^2, na.rm=T)/328
 rf.MSE
@@ -697,23 +701,37 @@ varImpPlot(rf.delay)
 
 ## 4. Boosting 
 
-Here we use the ``gbm()`` package, and within it the ``gbm()`` function, to fit boosted regression trees to the ``train`` data set. We run ``gbm()`` with the option ``distribution = "gaussian"`` since this is a regression problem. The argument ``n.trees = 10000`` indicates that we want 10000 trees, and the option ``interaction.depth = 1`` limits the depth of each tree.
+Here we use the ``gbm()`` package, and within it the ``gbm()`` function, to fit boosted regression trees to the ``train`` data set. We run ``gbm()`` with the option ``distribution = "gaussian"`` since this is a regression problem. The argument ``n.trees = 150`` indicates that we want 150 trees, and the option ``interaction.depth = 3`` limits the depth of each tree.
 
 ```{r}
-errors <- 
 library(gbm)
+library(bst)
+library(plyr)
+library(caret)
 set.seed(1)
-train <- train %>%
-  filter(!is.na(ARR_DELAY))
+
+# find ideal hyper-parameters through CV
+gbmFit <- train(ARR_DELAY ~ DAY_OF_MONTH +
+                 TAXI_IN +
+                 TAXI_OUT +
+                 DEP_DELAY +
+                 CARRIER_DELAY +
+                 NAS_DELAY +
+                 LATE_AIRCRAFT_DELAY, data = train, 
+                 method = "gbm")
+
+gbmFit
+
+# boosted model wiht cross-validated hyper-parameters
 boost.delay <- gbm(ARR_DELAY ~ DAY_OF_MONTH +
                  TAXI_IN +
-                TAXI_OUT +
-               DEP_DELAY +
-              CARRIER_DELAY +
-             NAS_DELAY +
-            LATE_AIRCRAFT_DELAY,
-           data = train, distribution = "gaussian",
-          n.trees=10000, interaction.depth=1, shrinkage=0.001, cv.folds=10)
+                 TAXI_OUT +
+                 DEP_DELAY +
+                 CARRIER_DELAY +
+                 NAS_DELAY +
+                 LATE_AIRCRAFT_DELAY,
+                 data = train, distribution = "gaussian",
+                 n.trees=150, interaction.depth=3, shrinkage=0.1, cv.folds=10)
 ```
 
 The ``summary()`` function also provides a relative influence plot and also outputs the relative influence statistics.
@@ -734,20 +752,7 @@ We now use the boosted model to predict ``ARR_DELAY`` on the test set:
 
 ```{r}
 yhat.boost <- predict(boost.delay, newdata =test,
-                      n.trees = 10000)
+                      n.trees = 150)
 boost_MSE <- sum((test$ARR_DELAY-yhat.boost)^2, na.rm = T)/328
 boost_MSE
-```
-
-The test MSE obtained is 11.8; similar to the test MSE for random forests and superior to that for bagging.  If we want to, we can perform boosting with a different value of the shrinkage parameter $\lambda$ in  Equation 8.10.  The default value is 0.001, but this is easily modified. Here, we take $\lambda = 0.2$.
-
-```{r}
-# boost.boston <- gbm(medv~., data = Boston[train,],
-#                     distribution = "gaussian", n.trees = 5000,
-#                     interaction.depth = 4,
-#                     shrinkage = 0.2,
-#                     verbose =FALSE)
-# yhat.boost <- predict(boost.boston, newdata = Boston[-train,],
-#                       n.trees = 5000)
-# mean((yhat.boost - boston.test)^2)
 ```
