@@ -613,7 +613,7 @@ gam01 <- gam(ARR_DELAY ~ DAY_OF_MONTH +
 anova(gam00, gam01, test = "F")
 ```
 
-based on anova test, the model with smoothing splines on TAXI_IN and the interaction term is a better fit
+based on anova test, the model without smoothing splines on TAXI_IN and the interaction term is a better fit
 
 ## More Anova
 
@@ -621,39 +621,69 @@ DAY_OF_WEEK and DEST have very high p-values, so let's try an anova test without
 
 ```{r}
 gam02 <- gam(ARR_DELAY ~ DAY_OF_MONTH +
-                   s(TAXI_IN) +
+                   TAXI_IN +
                    s(TAXI_OUT) +
                    s(DEP_DELAY) +
                    CARRIER_DELAY +
                    NAS_DELAY +
                    LATE_AIRCRAFT_DELAY +
-                   s(TAXI_IN, by = NAS_DELAY), data = train)
+                   TAXI_IN, by = NAS_DELAY, data = train)
 
-anova(gam00, gam02, test = "F")
+anova(gam01, gam02, test = "F")
 ```
 
-based on the anova test, the model including DAY_OF_WEEK and DEST is a better fit
+based on the anova test, the model excluding DAY_OF_WEEK and DEST is a better fit
 
 ## Model Diagnostics
 
 ```{r}
 par(mfrow = c(2,2))
-gam.check(gam00)
+gam.check(gam02)
 ```
 
 ## Test Error
 
 ```{r}
-gam_preds <- predict.gam(gam00, newdata = test)
+gam_preds <- predict.gam(gam02, newdata = test)
 gam_MSE <- sum((test$ARR_DELAY - gam_preds)^2, na.rm=T)/328
 gam_MSE
+```
+
+## Boxcox Transformed GAM
+
+```{r}
+gambc <- gam(bc_adj_ARR_DELAY ~ DAY_OF_MONTH +
+                   TAXI_IN +
+                   s(TAXI_OUT) +
+                   s(DEP_DELAY) +
+                   CARRIER_DELAY +
+                   NAS_DELAY +
+                   LATE_AIRCRAFT_DELAY +
+                   TAXI_IN, by = NAS_DELAY, data = train)
+
+summary(gambc)
+```
+
+### BC Model Diagnostics
+
+```{r}
+par(mfrow = c(2,2))
+gam.check(gambc)
+```
+
+### BC Test Error
+
+```{r}
+#gambc_preds <- predict.gam(gambc, newdata = test)
+#gambc_MSE <- sum((test$ARR_DELAY - gambc_preds)^2, na.rm=T)/328
+#gambc_MSE
 ```
 
 # TREES
 
 ## Random Forests
 
-```{r}
+```{r, message=FALSE}
 library(tree)
 library(randomForest)
 ```
@@ -698,38 +728,38 @@ library(gbm)
 set.seed(1)
 train <- train %>%
   filter(!is.na(ARR_DELAY))
-boost.delay <- gbm(ARR_DELAY ~ DAY_OF_MONTH +
-                   TAXI_IN +
-                   TAXI_OUT +
-                   DEP_DELAY +
-                   CARRIER_DELAY +
-                   NAS_DELAY +
-                   LATE_AIRCRAFT_DELAY,
-                   data = train, distribution = "gaussian",
-                   n.trees=10000, interaction.depth=1, shrinkage=0.001, cv.folds=10)
+#boost.delay <- gbm(ARR_DELAY ~ DAY_OF_MONTH +
+ #                  TAXI_IN +
+  #                 TAXI_OUT +
+   #                DEP_DELAY +
+    #               CARRIER_DELAY +
+     #              NAS_DELAY +
+      #             LATE_AIRCRAFT_DELAY,
+       #            data = train, distribution = "gaussian",
+        #           n.trees=10000, interaction.depth=1, shrinkage=0.001, cv.folds=10)
 ```
 
 The ``summary()`` function also provides a relative influence plot and also outputs the relative influence statistics.
 
 ```{r}
-summary(boost.delay)
+#summary(boost.delay)
 ```
 
 We see that ``DEP_DELAY`` and ``DAY_OF_MONTH`` are by far the most important variables. We can also produce *partial dependence plots* for these two variables.  These plots illustrate the marginal effect of the selected variables on the response after ``integrating`` out the other variables.
 
 ```{r}
-par(mfrow = c(1,2))
-plot(boost.delay, i = "DEP_DELAY")
-plot(boost.delay, i = "DAY_OF_MONTH")
+#par(mfrow = c(1,2))
+#plot(boost.delay, i = "DEP_DELAY")
+#plot(boost.delay, i = "DAY_OF_MONTH")
 ```
 
 We now use the boosted model to predict ``ARR_DELAY`` on the test set:
 
 ```{r}
-yhat.boost <- predict(boost.delay, newdata =test,
-                       n.trees = 10000)
-boost_MSE <- sum((test$ARR_DELAY-yhat.boost)^2)/328
-boost_MSE #returning NA for some reason...
+#yhat.boost <- predict(boost.delay, newdata =test,
+#                       n.trees = 10000)
+#boost_MSE <- sum((test$ARR_DELAY-yhat.boost)^2, na.rm = T)/328
+#boost_MSE
 ```
 
 The test MSE obtained is 11.8; similar to the test MSE for random forests and superior to that for bagging.  If we want to, we can perform boosting with a different value of the shrinkage parameter $\lambda$ in  Equation 8.10.  The default value is 0.001, but this is easily modified. Here, we take $\lambda = 0.2$.
