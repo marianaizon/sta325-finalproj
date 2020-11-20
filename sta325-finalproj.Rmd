@@ -402,7 +402,13 @@ plot(bc_model)
 # hello
 ```
 
+```{r}
+train <- train %>%
+  mutate(bc_adj_ARR_DELAY = ((adj_ARR_DELAY^bc_lambda) - 1)/bc_lambda)
 
+hist(train$bc_adj_ARR_DELAY)
+hist(train$adj_ARR_DELAY)
+```
 
 
 First, let's just fit a full linear model with all the variables we would like to explore. 
@@ -424,12 +430,24 @@ linear_MSE <- sum((full_model_preds-test$ARR_DELAY)^2, na.rm=T)/328
 linear_MSE
 ```
 
+```{r take-2}
+full_model2 <- lm(ARR_DELAY ~ 
+                    DEP_DELAY + 
+                    DAY_OF_WEEK + 
+                    OP_CARRIER + 
+                    DEST + 
+                    CRS_DEP_TIME + 
+                    CRS_ARR_TIME + 
+                    TAXI_OUT + 
+                    TAXI_IN + 
+                    TYPE_DELAY, train)
+```
 
 ### Select Model with AIC
 
 ```{r, message=FALSE}
 library(MASS)
-step_model <- stepAIC(full_model, trace = FALSE)
+step_model <- stepAIC(full_model2, trace = FALSE)
 summary(step_model)
 ```
 
@@ -468,60 +486,49 @@ grid.arrange(p14, p15, nrow = 1)
 ```
 
 
+```{r}
+step_model
+```
+
+
 From what I'm seeing in the plots above, there could be an interaction between taxi_out and carrier_delay. There also seems to be an interaction between NAS delay and taxi_out as well as a possible one between NAS delay and taxi_in. Let's test these three interactions below.
 
 ```{r}
 # carrier vs taxi out
-interaction1 <- lm(ARR_DELAY ~ DAY_OF_MONTH +
-                   TAXI_IN +
-                   TAXI_OUT +
-                   DEST +
-                   DEP_DELAY +
-                   CARRIER_DELAY +
-                   NAS_DELAY +
-                  CARRIER_DELAY*TAXI_OUT, data = train)
-# nas vs taxi out
-interaction2 <- lm(ARR_DELAY ~ DAY_OF_MONTH + 
-                   TAXI_IN +
-                   TAXI_OUT +
-                   DEST +
-                   DEP_DELAY +
-                   CARRIER_DELAY +
-                   NAS_DELAY +
-                  NAS_DELAY*TAXI_OUT, data = train)
-
-# nas vs taxi in
-interaction3 <- lm(ARR_DELAY ~ DAY_OF_MONTH + 
-                   TAXI_IN +
-                   TAXI_OUT +
-                   DEST +
-                   DEP_DELAY +
-                   CARRIER_DELAY +
-                   NAS_DELAY +
-                  NAS_DELAY*TAXI_IN, data = train)
+# interaction1 <- lm(ARR_DELAY ~ 
+#                     DEP_DELAY + 
+#                     OP_CARRIER + 
+#                     DEST + 
+#                     CRS_DEP_TIME + 
+#                     CRS_ARR_TIME + 
+#                     TAXI_OUT + 
+#                     TAXI_IN + 
+#                     TYPE_DELAY +
+#                     
+#                      , data = train)
 
 ```
 
 
 ```{r}
-anova(step_model, interaction1)
+#anova(step_model, interaction1)
 ```
 
 ```{r}
-anova(step_model, interaction2)
+#anova(step_model, interaction2)
 ```
 
 ```{r}
-anova(step_model, interaction3)
+#anova(step_model, interaction3)
 ```
 
 It actually seems that interaction3: NAS_DELAY and TAXI_IN is the only interaction that is statistically significant in predicting ARR_DELAY. Let's make this model our current model:
 
 ### Final Linear Model
 
-
 ```{r}
-current_model <- interaction3
+#EDIT!
+current_model <- step_model
 
 summary(current_model)
 ```
