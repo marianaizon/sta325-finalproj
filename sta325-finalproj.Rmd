@@ -550,77 +550,79 @@ bc_adj_linear_model_MSE
 
 ## Initial Model
 
-fit a gam model with numerical variables on a smoothing spline and including the interaction between NAS_DELAY and TAXI_IN
+fit a gam model with numerical variables on a smoothing spline
 
 ```{r}
-gam00 <- gam(ARR_DELAY ~ DAY_OF_MONTH +
-                   DAY_OF_WEEK +
+gam00 <- gam(ARR_DELAY ~ DAY_OF_WEEK +
+                   OP_CARRIER +
                    s(TAXI_IN) +
                    s(TAXI_OUT) +
                    DEST +
                    s(DEP_DELAY) +
-                   CARRIER_DELAY +
-                   NAS_DELAY +
-                   LATE_AIRCRAFT_DELAY +
-                   s(TAXI_IN, by = NAS_DELAY), data = train)
+                   s(CRS_DEP_TIME) + 
+                   s(CRS_ARR_TIME) + 
+                   TYPE_DELAY, data = train)
 
 summary(gam00)
 ```
 
 ```{r}
-par(mfrow = c(2,2))
+par(mfrow = c(2,3))
 plot.gam(gam00, se=TRUE)
 ```
 
 ## Checking Lineartiy
 
-TAXI_IN and the interaction between NAS_DELAY and TAXI_IN may be linear
+TAXI_IN may be linear
 
 ```{r}
-gam01 <- gam(ARR_DELAY ~ DAY_OF_MONTH +
-                   DAY_OF_WEEK +
+gam01 <- gam(ARR_DELAY ~ DAY_OF_WEEK +
+                   OP_CARRIER +
                    TAXI_IN +
                    s(TAXI_OUT) +
                    DEST +
                    s(DEP_DELAY) +
-                   CARRIER_DELAY +
-                   NAS_DELAY +
-                   LATE_AIRCRAFT_DELAY +
-                   TAXI_IN*NAS_DELAY, data = train)
+                   s(CRS_DEP_TIME) + 
+                   s(CRS_ARR_TIME) + 
+                   TYPE_DELAY, data = train)
 
 anova(gam00, gam01, test = "F")
 ```
 
-based on anova test, the model without smoothing splines on TAXI_IN and the interaction term is a better fit
+based on anova test, the model with a smoothing spline on TAXI_IN is a better fit
 
 ## More Anova
 
-DAY_OF_WEEK, DEST, CARRIER_DELAY, and LATE_AIRCRAFT_DELAY have very high p-values, so let's try an anova test without including them
+DAY_OF_WEEK, DEST, and CRS_ARR_TIME have very high p-values, so let's try an anova test without including them
 
 ```{r}
-gam02 <- gam(ARR_DELAY ~ DAY_OF_MONTH +
-                   TAXI_IN +
+gam02 <- gam(ARR_DELAY ~ OP_CARRIER +
+                   s(TAXI_IN) +
                    s(TAXI_OUT) +
                    s(DEP_DELAY) +
-                   NAS_DELAY +
-                   TAXI_IN*NAS_DELAY, data = train)
+                   s(CRS_DEP_TIME) + 
+                   TYPE_DELAY, data = train)
 
-anova(gam01, gam02, test = "F")
+anova(gam00, gam02, test = "F")
 ```
 
-based on the anova test, the model including these variables is a better fit
+based on the anova test, the model excluding these variables is a better fit
 
 ## Model Diagnostics
 
 ```{r}
+summary(gam02)
+```
+
+```{r}
 par(mfrow = c(2,2))
-gam.check(gam01)
+gam.check(gam02)
 ```
 
 ## Test Error
 
 ```{r}
-gam_preds <- predict.gam(gam01, newdata = test)
+gam_preds <- predict.gam(gam02, newdata = test)
 
 hist(gam_preds)
 hist(test$ARR_DELAY)
@@ -632,16 +634,12 @@ gam_MSE
 ## Boxcox Transformed GAM
 
 ```{r}
-gambc <- gam(bc_adj_ARR_DELAY ~ DAY_OF_MONTH +
-                   DAY_OF_WEEK +
-                   TAXI_IN +
+gambc <- gam(bc_adj_ARR_DELAY ~ OP_CARRIER +
+                   s(TAXI_IN) +
                    s(TAXI_OUT) +
-                   DEST +
                    s(DEP_DELAY) +
-                   CARRIER_DELAY +
-                   NAS_DELAY +
-                   LATE_AIRCRAFT_DELAY +
-                   TAXI_IN*NAS_DELAY, data = train)
+                   s(CRS_DEP_TIME) + 
+                   TYPE_DELAY, data = train)
  
 summary(gambc)
 ```
