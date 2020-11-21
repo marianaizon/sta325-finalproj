@@ -49,6 +49,13 @@ Finally, we decided to fit our simple multiple linear model with the Box-Cox tra
 Moreover, upon looking at the model diagnostics for each of the three models, it appeared that most of the plots looked reasonable for a linear model fit. However, the normal QQ plots for each of the three models showed signs of deviation from normality, prompting us to pursue more cutting-edge machine learning models, such as the GAM and tree-based regression.
 
 ## Generalized Additive Modeling
+After fitting three multiple linear regression models, the next step in our process was to fit general additive models (GAMs) in order to explore a more complex model. In general, generalized additive models are relatively computationally inexpensive tasks, allows for rather easy inference, and has the ability to model highly complex nonlinear relationships. Furthermore, it allows us to explore the individual relationships between each of the predictors and the response variable. Thus, we expected our GAM models to perform well. 
+
+We first fit a GAM with a smoothing spline on the numerical variables and included the interaction we found significant from the multiple linear regression modeling process above between $NAS\_DELAY$ and $TAXI\_IN$. After checking the linearity, we found that $TAXI\_IN$ and also the interaction between $NAS\_DELAY$ and $TAXI\_IN$ could be linear. We conducted an ANOVA test where the model without smoothing splines on $TAXI\_IN$ and the interaction term is a better fit. In addition, $DAY\_OF\_WEEK$, $DEST$, $CARRIER\_DELAY$, and $LATE\_AIRCRAFT\_DELAY$ had very high p-values, so we ran another ANOVA test excluding those variables. Based on the results of that ANOVA test, the model including these variables was a better fit. This model included $DAY\_OF\_MONTH$, $DAY\_OF\_WEEK$, $TAXI\_IN$, a smoothing spline on $TAXI\_out$, $DEST$, a smoothing spline on $DEP\_DELAY$, $CARRIER\_DELAY$, $NAS\_DELAY$, $LATE\_AIRCRAFT\_DELAY$, and the interaction between $NAS\_DELAY$ and $TAXI\_IN$. When checking model diagnostics, it appeared that the plots looked reasonable with normally distributed residuals. 
+
+We then fit the same GAM on the boxcox transformed response variable. The model diagnostics yielded reasonable plots, again with normally distributed residuals. However, this model had a higher MSE than the GAM fit on the untransformed response variable. Therefore, we concluded that the GAM on the original response variable was a better fit.
+
+
 ## Tree-Based Regression
 
 # Results
