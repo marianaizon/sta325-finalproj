@@ -496,6 +496,7 @@ plot(bc_adj_linear_model)
 par(mfrow = c(2,2))
 plot(adj_linear_model)
 ```
+
 ### Test Error
 
 LOOKING AT:
@@ -594,34 +595,36 @@ based on anova test, the model without smoothing splines on TAXI_IN and the inte
 
 ## More Anova
 
-DAY_OF_WEEK and DEST have very high p-values, so let's try an anova test without including them
+DAY_OF_WEEK, DEST, CARRIER_DELAY, and LATE_AIRCRAFT_DELAY have very high p-values, so let's try an anova test without including them
 
 ```{r}
 gam02 <- gam(ARR_DELAY ~ DAY_OF_MONTH +
                    TAXI_IN +
                    s(TAXI_OUT) +
                    s(DEP_DELAY) +
-                   CARRIER_DELAY +
                    NAS_DELAY +
-                   LATE_AIRCRAFT_DELAY +
-                   TAXI_IN, by = NAS_DELAY, data = train)
+                   TAXI_IN*NAS_DELAY, data = train)
 
 anova(gam01, gam02, test = "F")
 ```
 
-based on the anova test, the model excluding DAY_OF_WEEK and DEST is a better fit
+based on the anova test, the model including these variables is a better fit
 
 ## Model Diagnostics
 
 ```{r}
 par(mfrow = c(2,2))
-gam.check(gam02)
+gam.check(gam01)
 ```
 
 ## Test Error
 
 ```{r}
-gam_preds <- predict.gam(gam02, newdata = test)
+gam_preds <- predict.gam(gam01, newdata = test)
+
+hist(gam_preds)
+hist(test$ARR_DELAY)
+
 gam_MSE <- sum((test$ARR_DELAY - gam_preds)^2, na.rm=T)/328
 gam_MSE
 ```
@@ -629,31 +632,39 @@ gam_MSE
 ## Boxcox Transformed GAM
 
 ```{r}
-# gambc <- gam(bc_adj_ARR_DELAY ~ DAY_OF_MONTH +
-#                    TAXI_IN +
-#                    s(TAXI_OUT) +
-#                    s(DEP_DELAY) +
-#                    CARRIER_DELAY +
-#                    NAS_DELAY +
-#                    LATE_AIRCRAFT_DELAY +
-#                    TAXI_IN, by = NAS_DELAY, data = train)
-# 
-# summary(gambc)
+gambc <- gam(bc_adj_ARR_DELAY ~ DAY_OF_MONTH +
+                   DAY_OF_WEEK +
+                   TAXI_IN +
+                   s(TAXI_OUT) +
+                   DEST +
+                   s(DEP_DELAY) +
+                   CARRIER_DELAY +
+                   NAS_DELAY +
+                   LATE_AIRCRAFT_DELAY +
+                   TAXI_IN*NAS_DELAY, data = train)
+ 
+summary(gambc)
 ```
 
 ### BC Model Diagnostics
 
 ```{r}
-# par(mfrow = c(2,2))
-# gam.check(gambc)
+par(mfrow = c(2,2))
+gam.check(gambc)
 ```
 
 ### BC Test Error
 
 ```{r}
-#gambc_preds <- predict.gam(gambc, newdata = test)
-#gambc_MSE <- sum((test$ARR_DELAY - gambc_preds)^2, na.rm=T)/328
-#gambc_MSE
+gambc_preds <- predict.gam(gambc, newdata = test)
+adjgam_preds <- ((gambc_preds*(bc_lambda) + 1)^(1/bc_lambda))
+bc_gam_pred = adjgam_preds - 77
+
+hist(bc_gam_pred)
+hist(test$ARR_DELAY)
+
+gambc_MSE <- sum((test$ARR_DELAY - bc_gam_pred)^2, na.rm=T)/328
+gambc_MSE
 ```
 
 # TREES
