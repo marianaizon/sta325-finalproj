@@ -39,8 +39,15 @@ Like the taxi times, a similar skew was found in both the predictor of departure
 Other interesting findings from our inital exploratory data analysis included finding empirical means and histograms of several predictors and the response. Additionally, from the days of week and days of month histograms and exploratory data analysis, we interestingly discovered that Saturday was an overall slow day in terms of numbers of flights, with a histogram of the number of flights across the days of the month of January 2020 showing the same trend. 
 
 # Methods
-
 ## Multiple Linear Regression
+In order to understand some of the underlying relationships in our data, we began our modeling with various iterations of multiple linear regression. Our first approach was to fit a model with all of our predictors, including the log-transformed predictors, $TAXI\_OUT$ and $TAXI\_IN$. We performed model selection using AIC as the criterion to get rid of some insignificant predictors, including $DAY\_OF\_WEEK$ and $CRS\_ARR\_TIME$.  We then used ANOVA testing to test various interaction terms based on our prior knowledge of these variables and found the following relationships significant in this log-transformed MLR model: airline carrier ($OP\_CARRIER$) & destination ($DEST$), time to taxi in ($log\_TAXI\_IN$) & destination ($DEST$), and time to taxi out ($log\_TAXI\_OUT$) and departure delay ($DEP\_DELAY$).
+
+In order to have a baseline model to compare our choices, we decided to fit a multiple linear regression model with the untransformed predictors and no interactions. Once again, we performed model selection using AIC as the criterion. This time, only $DAY\_OF\_WEEK$ was found to be insignificant. We also tested out interactions, but surprisingly, none of our interaction effects were found to be significant through ANOVA testing. Therefore, our simple multiple linear model just included the untransformed predictors and no interaction effects.
+
+Finally, we decided to fit our simple multiple linear model with the Box-Cox transformed response variable $ARR\_DELAY$, concluding our iterations of multiple linear regression models. After finding the test MSE for each of our three models - (1) MLR with log transformed predictors ($TAXI\_IN$ and $TAXI\_OUT$), interactions, and no Box-Cox transformed response, (2) MLR without any interactions or transformations, (3) MLR with Box-Cox transformed response, no interactions or transformations on the predictors - we were surprised to find that model (2), the simplest iteration, performed substantially better than the rest.
+
+Moreover, upon looking at the model diagnostics for each of the three models, it appeared that most of the plots looked reasonable for a linear model fit. However, the normal QQ plots for each of the three models showed signs of deviation from normality, prompting us to pursue more cutting-edge machine learning models, such as the GAM and tree-based regression.
+
 ## Generalized Additive Modeling
 ## Tree-Based Regression
 
