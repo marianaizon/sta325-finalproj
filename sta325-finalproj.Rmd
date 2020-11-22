@@ -712,7 +712,7 @@ varImpPlot(rf.delay)
 
 Here we use the ``gbm()`` package, and within it the ``gbm()`` function, to fit boosted regression trees to the ``train`` data set. We run ``gbm()`` with the option ``distribution = "gaussian"`` since this is a regression problem. The argument ``n.trees = 150`` indicates that we want 150 trees, and the option ``interaction.depth = 3`` limits the depth of each tree.
 
-```{r}
+```{r message = FALSE}
 library(gbm)
 library(bst)
 library(plyr)
@@ -765,3 +765,61 @@ yhat.boost <- predict(boost.delay, newdata =test,
 boost_MSE <- sum((test$ARR_DELAY-yhat.boost)^2, na.rm = T)/328
 boost_MSE
 ```
+
+
+## Test Errors
+
+```{r}
+```
+
+```{r}
+options(scipen = 5, digits = 4)
+model.names <- c("Baseline Linear", "Selected Linear w/ Log-Transformed Predictors", "Selected Linear w/ Box-Cox", "GAM", "GAM w/ Box-Cox", "Random Forest", "Boosting")
+model.types <- c("Multiple Linear Regression", "Multiple Linear Regression", "Multiple Linear Regression", "Generalized Additive Model", "Generalized Additive Model", "Random Forest", "Boosting")
+
+#model4.ints <- c("FALSE", "FALSE", "FALSE", "FALSE")
+
+model.mse <- c(plain_linear_model_MSE, log_linear_MSE,
+                    bc_adj_linear_model_MSE, gam_MSE,
+                    gambc_MSE, rf.MSE, boost_MSE)
+model.mse.char <- c("322.46", "333.90", "334.92", "312.30", "317.45", "155.01", "129.80")
+
+#model4.cvmse_var <- c(mlr4_1_cv, mlr4_4_bc_cv, ridge.mom4.cvmse, gam4_bc_gcv)
+#model4.cvmse <- c(2.284e+20, "25.66", 25.62, 25.79)
+
+
+#pctchange4_3 <- round(-((ridge.mom4.cvmse - mlr4_4_bc_cv)/mlr4_4_bc_cv)*100, digits = 4)
+#pctchange4_4 <- round(-((gam4_bc_gcv - mlr4_4_bc_cv)/mlr4_4_bc_cv)*100, digits = 4)
+
+#model4.pctchange <- c("---", "---", pctchange4_3, pctchange4_4)
+
+errors.df <- data.frame(model.names, 
+                         model.types, 
+                         model.mse.char
+                         )
+
+ #model4.ints, 
+#model4.cvmse, 
+                         #model4.pctchange
+
+
+#colnames(errors.df4) <- c("Model Name", "Model Type", "Interactions?", "Model MSE", "Model CV MSE", "Model Percent Improvement")
+errors.df
+```
+
+```{r}
+library(formattable)
+formattable(errors.df,
+            col.names = c("Model Name", "Model Type", "Model MSE"),
+            list(
+  model.names = formatter("span", style = x ~ ifelse(x == "Boosting", 
+    style(color = "purple", font.weight = "bold"), NA)),
+  model.mse.char = formatter("span", style = x ~ ifelse(x == "129.80", 
+    style(color = "purple", font.weight = "bold"), NA)),
+  model.types = formatter("span", style = x ~ ifelse(x == "Boosting", 
+    style(color = "purple", font.weight = "bold"), NA))
+))
+```
+
+
+
