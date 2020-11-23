@@ -796,7 +796,7 @@ varImpPlot(rf.delay)
 
 Here we use the ``gbm()`` package, and within it the ``gbm()`` function, to fit boosted regression trees to the ``train`` data set. We run ``gbm()`` with the option ``distribution = "gaussian"`` since this is a regression problem. The argument ``n.trees = 150`` indicates that we want 150 trees, and the option ``interaction.depth = 3`` limits the depth of each tree.
 
-```{r boost-fititng, message = FALSE}
+```{r boost-fititng, message = FALSE, echo=FALSE}
 
 set.seed(1)
 
