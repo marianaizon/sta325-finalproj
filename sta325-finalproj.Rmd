@@ -1,7 +1,7 @@
 ---
-title: "Sta 325 Final Project"
+title: "STA 325 Final Project Code"
 author: "Calleigh Smith, Hannah Bogomilsky, Hugh Esterson, Maria Henriquez, Mariana Izon"
-date: "11/22/2020"
+date: "November 23, 2020"
 output: pdf_document
 ---
 
@@ -17,8 +17,17 @@ library(tidyverse)
 library(gridExtra)
 library(mgcv)
 library(patchwork)
+library(MASS)
+library(EnvStats)
+library(tree)
+library(randomForest)
+library(gbm)
+library(bst)
+library(plyr)
+library(caret)
 ```
 
+# Data Load-In and Initial Cleaning
 
 ```{r load-clean-data, warning=FALSE, message=FALSE}
 # read data
@@ -27,14 +36,13 @@ flights <- read_csv("data/flights.csv")
 # find unique airlines, destinations, and types of delays
 unique(flights$OP_CARRIER)
 unique(flights$DEST)
-class(flights$CARRIER_DELAY)
 
 # mutate delays and filter out NA arrival delays
 flights <- flights %>% 
   mutate(CARRIER_DELAY = case_when(CARRIER_DELAY > 0 ~ 1,
                                    TRUE ~ 0),
          WEATHER_DELAY = case_when(WEATHER_DELAY > 0 ~ 1,
-                                   TRUE ~ 0),
+            TRUE ~ 0),
          NAS_DELAY = case_when(NAS_DELAY > 0 ~ 1,
                                TRUE ~ 0),
          SECURITY_DELAY = case_when(SECURITY_DELAY > 0 ~ 1,
@@ -42,19 +50,21 @@ flights <- flights %>%
          LATE_AIRCRAFT_DELAY = case_when(LATE_AIRCRAFT_DELAY > 0 ~ 1,
                                          TRUE ~ 0)) %>% 
   filter(!is.na(ARR_DELAY))
-
 ```
 
-```{r}
+```{r data-glimpse}
 # glimpse data
 flights
 ```
 
-# INDIVIDUAL PREDICTORS
+\newpage
 
-## Taxi Histograms
+# Exploratory Data Analysis
+## Individual Predictor Variable EDA
 
-```{r, warning=FALSE}
+### Taxi Histograms
+
+```{r taxi-plots, warning=FALSE}
 # plot untransformed predictor taxi_in
 pTAXI_IN <- ggplot(data = flights, aes(x = TAXI_IN)) +
   geom_histogram(binwidth = 5, fill = "#FFFF00", color = "#002D72", alpha = .7) +
@@ -83,8 +93,8 @@ flights$log_TAXI_IN <- log(flights$TAXI_IN)
 
 # plot log transformed taxi_out
 plog_TAXI_OUT <- ggplot(data = flights, aes(x = log_TAXI_OUT)) +
-  geom_histogram(fill = "#FFFF00", color = "#002D72", alpha = .7) +
-  labs(x = "Time to Taxi Out",
+  geom_histogram(binwidth = .25, fill = "#FFFF00", color = "#002D72", alpha = .7) +
+  labs(x = "Log-Time to Taxi Out",
        y = "Frequency",
        title = "Histogram of log(TAXI_OUT)") + 
   theme(plot.title = element_text(size = 10,hjust = 0.5),
@@ -94,8 +104,8 @@ plog_TAXI_OUT <- ggplot(data = flights, aes(x = log_TAXI_OUT)) +
 
 # plot log transform taxi_in
 plog_TAXI_IN <- ggplot(data = flights, aes(x = log_TAXI_IN)) +
-  geom_histogram(fill = "#FFFF00", color = "#002D72", alpha = .7) +
-  labs(x = "Time to Taxi Out",
+  geom_histogram(binwidth = .25, fill = "#FFFF00", color = "#002D72", alpha = .7) +
+  labs(x = "Log-Time to Taxi Out",
        y = "Frequency",
        title = "Histogram of Log(TAXI_IN)") + 
   theme(plot.title = element_text(size = 10,hjust = 0.5),
@@ -107,11 +117,11 @@ pTAXI_IN + plog_TAXI_IN
 pTAXI_OUT + plog_TAXI_OUT
 ```
 
-## Days of Month and Week
+### Days of Month and Week
 
-```{r}
+```{r date-plots}
 # plot predictor DAYS_OF_MONTH
-p02 <- ggplot(data = flights, aes(x = DAY_OF_MONTH)) +
+pDOM <- ggplot(data = flights, aes(x = DAY_OF_MONTH)) +
   geom_histogram(binwidth = 1, fill = "#E81828", color = "#002D72", alpha = .8) +
   labs(x = "Days of Month",
        y = "Frequency",
@@ -122,7 +132,7 @@ p02 <- ggplot(data = flights, aes(x = DAY_OF_MONTH)) +
         axis.title.y.left = element_text(size = 8))
 
 # plot predictor DAY_OF_WEEK
-p03 <- ggplot(data = flights, aes(x = DAY_OF_WEEK)) +
+pDOW <- ggplot(data = flights, aes(x = DAY_OF_WEEK)) +
   geom_histogram(binwidth = 1, fill = "#E81828", color = "#002D72", alpha = .8) +
   labs(x = "Day of Week",
        y = "Frequency",
@@ -132,30 +142,32 @@ p03 <- ggplot(data = flights, aes(x = DAY_OF_WEEK)) +
         axis.title.x.bottom = element_text(size = 8, face = "italic"),
         axis.title.y.left = element_text(size = 8))
 
-grid.arrange(p02, p03, nrow = 1)
+pDOM + pDOW
 ```
 
-## Destination Locations
+### Destination Locations
 
 Origin is all JFK, but we could consider the different destination locations. 
 
-```{r}
+```{r DEST-plot}
 # plot destinations in CA
-ggplot(data = flights, aes(x = DEST)) +
+pDEST <- ggplot(data = flights, aes(x = DEST)) +
   geom_bar(fill = "#40E0D0", color = "#002D72", alpha = .7) +
-  labs(x = "Destinations",
+  labs(x = "Destination",
        title = "Bar Plot of Destinations") + 
   theme(plot.title = element_text(size = 12,hjust = 0.5),
         plot.subtitle = element_text(hjust = 0.5),
         axis.title.x.bottom = element_text(size = 8, face = "italic"),
         axis.title.y.left = element_text(size = 8))
+
+pDEST
 ```
 
-## Airlines
+### Airlines
 
-```{r}
+```{r airline-plot}
 # plot airline carriers
-ggplot(data = flights, aes(x = OP_CARRIER)) +
+pLINE <- ggplot(data = flights, aes(x = OP_CARRIER)) +
   geom_bar(fill = "#40E0D0", color = "#002D72", alpha = .7) +
   labs(x = "Airline",
        title = "Bar Plot of Airlines") + 
@@ -164,16 +176,27 @@ ggplot(data = flights, aes(x = OP_CARRIER)) +
         axis.title.x.bottom = element_text(size = 8, face = "italic"),
         axis.title.y.left = element_text(size = 8))
 
+pLINE
+
 # plot airlines by destination
-ggplot(data = flights, aes(x = DEST, fill = OP_CARRIER)) +
-  geom_bar()
+pLINEDEST <- ggplot(data = flights, aes(x = DEST, fill = OP_CARRIER)) +
+  geom_bar() + 
+  labs(x = "Destination",
+       title = "Bar Plot of Airlines by Destination",
+       fill = "Airline")
+    theme(plot.title = element_text(size = 12,hjust = 0.5),
+        plot.subtitle = element_text(hjust = 0.5),
+        axis.title.x.bottom = element_text(size = 8, face = "italic"),
+        axis.title.y.left = element_text(size = 8))
+    
+pLINEDEST
 ```
 
-## Depart Delay Histogram
+### Depart Delay Histogram
 
-```{r, warning = FALSE}
+```{r departdelay-plot, warning = FALSE}
 # plot DEP_DELAY
-ggplot(data = flights, aes(x = DEP_DELAY)) +
+pDEPDELAY <- ggplot(data = flights, aes(x = DEP_DELAY)) +
   geom_histogram(binwidth = 4, fill = "#e9c2ed", color = "#002D72", alpha = 0.7) +
   xlim(-25, 50) +
   labs(x = "Departure Delay",
@@ -184,17 +207,18 @@ ggplot(data = flights, aes(x = DEP_DELAY)) +
         axis.title.x.bottom = element_text(size = 8, face = "italic"),
         axis.title.y.left = element_text(size = 8))
 
+pDEPDELAY
 ```
 
-```{r}
+```{r delaytype-plot}
 # plot types of delays
 p1 <- ggplot(data = flights, aes(x = CARRIER_DELAY)) +
   geom_bar(fill = "#E81828", color = "#002D72") +
   labs(title = "Carrier Delay")
 
-p2 <- ggplot(data = flights, aes(x = WEATHER_DELAY)) +
-  geom_bar(fill = "#E81828", color = "#002D72") +
-  labs(title = "Weather Delay")
+#p2 <- ggplot(data = flights, aes(x = WEATHER_DELAY)) +
+  #geom_bar(fill = "#E81828", color = "#002D72") +
+  #labs(title = "Weather Delay")
 
 p3 <- ggplot(data = flights, aes(x = NAS_DELAY)) +
   geom_bar(fill = "#E81828", color = "#002D72") +
@@ -208,27 +232,21 @@ p5 <- ggplot(data = flights, aes(x = LATE_AIRCRAFT_DELAY)) +
   geom_bar(fill = "#E81828", color = "#002D72") +
   labs(title = "Late Aircraft Delay")
 
-grid.arrange(p1,p2,p3,p4,p5, nrow = 3)
+grid.arrange(p1,p3,p4,p5, nrow = 3)
 ```
 
 From this EDA of the categorical variables, we probably should not perform analysis with `SECURITY_DELAY` since all of them are classified as 0. 
-
-```{r}
-flights %>%
-  count(WEATHER_DELAY)
-```
 
 Furthermore, only 9 flights are classified with a weather delay, so it may not be good for our model to include this as a variable for right now. 
 
 Overall, the categorical delay predictors I would think we could use are: Carrier Delay, NAS Delay, and Late Aircraft Delay
 
-## RESPONSE VARIABLE: ARRIVAL DELAY TIME
+## Response Variable EDA
 
-I just made it a different color so that when I scroll up to look at distributions I can easily tell the response from predictors (definitely can change at the end).
 
-```{r, warning = FALSE}
+```{r ARRDELAY-plot, warning = FALSE}
 # plot ARR_DELAY
-ggplot(data = flights, aes(x = ARR_DELAY)) +
+pARRDELAY <- ggplot(data = flights, aes(x = ARR_DELAY)) +
   geom_histogram(binwidth = 20, fill = "#002D72", color = "#E81828", alpha = 0.8) +
   xlim(-100, 150) +
   labs(x = "Arrival Delay",
@@ -239,16 +257,14 @@ ggplot(data = flights, aes(x = ARR_DELAY)) +
         axis.title.x.bottom = element_text(size = 8, face = "italic"),
         axis.title.y.left = element_text(size = 8))
 
-# 2-parameter BC transformation
-## can apply to GAM
+pARRDELAY
 ```
 
 
-# PREDICTORS VS RESPONSE
+## Predictors vs. Response EDA
 
-## ARR_DELAY and TAXI_IN / TAXI_OUT
-
-```{r}
+### TAXI_IN / TAXI_OUT vs. ARR_DELAY
+```{r TAXI-resp}
 p6 <- ggplot(data = flights, aes(y = ARR_DELAY, x = TAXI_IN)) +
   geom_point() +
   labs(title = "Arrival Delay vs Taxi_In")
@@ -257,7 +273,7 @@ p7 <- ggplot(data = flights, aes(y = ARR_DELAY, x = TAXI_OUT)) +
   geom_point() +
   labs(title = "Arrival Delay vs Taxi_Out")
 
-grid.arrange(p6,p7, nrow = 1)
+
 
 plog6 <- ggplot(data = flights, aes(y = ARR_DELAY, x = log_TAXI_IN)) +
   geom_point() +
@@ -266,21 +282,25 @@ plog6 <- ggplot(data = flights, aes(y = ARR_DELAY, x = log_TAXI_IN)) +
 plog7 <- ggplot(data = flights, aes(y = ARR_DELAY, x = log_TAXI_OUT)) +
   geom_point() +
   labs(title = "Arrival Delay vs log(Taxi_Out)")
-grid.arrange(plog6,plog7, nrow = 1)
+
+p6 + plog6
+p7 + plog7
 ```
 
 These plots above suggest that we may want to transform the variables at some point. 
 
-```{r}
+### DEST vs. ARR_DELAY
+
+```{r DEST-resp}
 ggplot(data = flights, aes(y = ARR_DELAY, x = DEST)) +
   geom_boxplot() +
   labs(x = "Destination",
        title = "Arrival Delay vs Destination")
 ```
 
-## ARR_DELAY and DAY_OF_WEEK
+### DAY_OF_WEEK vs. ARR_DELAY
 
-```{r}
+```{r DOW-resp}
 p8 <- ggplot(data = flights, aes(y = ARR_DELAY, x = DAY_OF_WEEK)) +
   geom_point() +
   labs(title = "Arrival Delay vs Day of Week")
@@ -289,12 +309,12 @@ p9 <- ggplot(data = flights, aes(y = ARR_DELAY, group = DAY_OF_WEEK)) +
   geom_boxplot() +
   labs(title = "Arrival Delay vs Day of Week")
 
-grid.arrange(p8,p9, nrow = 2)
+p8 + p9
 ```
 
-## ARR_DELAY and DAY_OF_MONTH
+### ARR_DELAY and DAY_OF_MONTH
 
-```{r}
+```{r DOM-resp}
 p10 <- ggplot(data = flights, aes(y = ARR_DELAY, x = DAY_OF_MONTH)) +
   geom_point() +
   labs(title = "Arrival Delay vs Day of Month")
@@ -303,89 +323,65 @@ p11 <- ggplot(data = flights, aes(y = ARR_DELAY, group = DAY_OF_MONTH)) +
   geom_boxplot() +
   labs(title = "Arrival Delay vs Day of Month")
 
-grid.arrange(p10, p11, nrow = 2)
+p10 + p11
 ```
 
+\newpage
 
-## Further Data Cleaning
+# Additional Data Cleaning
 
-```{r destination-change}
+## New Bounds and Variable
+```{r data-cleaned}
 # take only SFO/LAX since all 4 carriers fly there
+# create TYPE_DELAY as a factor variable for type of delays
 flights <- flights %>% 
   filter(DEST == "SFO" | DEST == "LAX") %>% 
   mutate(TYPE_DELAY = case_when(NAS_DELAY == 1 ~ "NAS",
                                 CARRIER_DELAY == 1 ~ "CARRIER",
                                 LATE_AIRCRAFT_DELAY == 1 ~ "LATE_AIRCRAFT",
+                                WEATHER_DELAY == 1 ~ "WEATHER",
                                 TRUE ~ "No Delay"))
-
-ggplot(data = flights, aes(x = TYPE_DELAY)) +
-  geom_bar()
-
-unique(flights$TYPE_DELAY)
 ```
 
-# SPLITTING DATA
+```{r TYPE_DELAY}
+pTYPE <- ggplot(data = flights, aes(x = TYPE_DELAY)) +
+  geom_bar(fill = "#002D72", color = "#E81828", alpha = 0.8) +
+  labs(x = "Type of Delay",
+       y = "Frequency",
+       title = "Histogram of TYPE_DELAY") + 
+  theme(plot.title = element_text(size = 12,hjust = 0.5),
+        plot.subtitle = element_text(hjust = 0.5),
+        axis.title.x.bottom = element_text(size = 8, face = "italic"),
+        axis.title.y.left = element_text(size = 8))
 
-```{r}
+pTYPE
+```
+
+## Test and Training Set Split
+
+We will use a 80-20 split of training and test sets.
+
+```{r data-split}
 set.seed(1234)
+
 flights <- flights %>%
-  mutate(id = row_number())
+  dplyr::mutate(id = row_number())
+
 train <- flights %>% 
   sample_frac(0.8)
 test <- anti_join(flights, train, by = "id")
 ```
 
+\newpage
 
-# LINEAR MODELS
+# Modeling
 
-Variables that I think we could explore: department delay time, days of month, days of week, taxi-in, taxi-out, destination, Carrier Delay, NAS Delay, and Late Aircraft Delay.
+## (1) Multiple Linear Regression
 
-### Full Log-Transformed Model 
+### (a) Baesline Linear Model (with AIC Selection)
 
-```{r new-attempt-lm}
-lm.01 <- lm(ARR_DELAY ~ DEP_DELAY + DAY_OF_WEEK + OP_CARRIER + DEST + CRS_DEP_TIME + CRS_ARR_TIME + log_TAXI_OUT + log_TAXI_IN + TYPE_DELAY, train)
-
-#plot(lm.01)
-#summary(lm.01)
-
-library(MASS)
-step_model <- stepAIC(lm.01, direction = "backward", trace = FALSE)
-#summary(step_model)
-
-lm.02 <- lm(ARR_DELAY ~ DEP_DELAY + OP_CARRIER + DEST + CRS_DEP_TIME  + log_TAXI_OUT + log_TAXI_IN + TYPE_DELAY + OP_CARRIER:DEST, train)
-#summary(lm.02)
-#anova(step_model, lm.02)
-
-lm.03 <- lm(ARR_DELAY ~ DEP_DELAY + OP_CARRIER + DEST + CRS_DEP_TIME  + log_TAXI_OUT + log_TAXI_IN + TYPE_DELAY + OP_CARRIER:DEST + DEST:log_TAXI_IN, train)
-
-#anova(lm.02, lm.03)
-
-
-log_linear_model <- lm(ARR_DELAY ~ DEP_DELAY + OP_CARRIER + DEST + CRS_DEP_TIME  + log_TAXI_OUT + log_TAXI_IN + TYPE_DELAY + OP_CARRIER:DEST + DEST:log_TAXI_IN+log_TAXI_OUT:DEP_DELAY, train)
-
-
-anova(lm.03, log_linear_model)
-
-summary(log_linear_model)
-plot(log_linear_model)
-
-## SIGNIFICANT INTERACTIONS
-#OP_CARRIER:DEST
-#DEST:log_TAXI_IN
-#CRS_DEP_TIME:DEST (***** makes zero intuitive sense - might not wanna do this)
-#CRS_ARR_TIME:log_TAXI_IN
-#log_TAXI_OUT:DEP_DELAY
-
-#log_TAXI_OUT:CRS_DEP_TIME (verrrrrry close to 0.05)
-# library(broom)
-# log_linear_preds <- predict(log_linear_model, test)
-# log_linear_MSE <- sum((log_linear_preds-test$ARR_DELAY)^2, na.rm=T)/328
-# log_linear_MSE
-```
-
-### Plain Linear Model 
-
-```{r take-2}
+```{r baseline-lm}
+# create linear model with all revelant variables
 full_model <- lm(ARR_DELAY ~ 
                     DEP_DELAY + 
                     DAY_OF_WEEK + 
@@ -398,49 +394,63 @@ full_model <- lm(ARR_DELAY ~
                     TYPE_DELAY, train)
 
 # summary(full_model)
-# full_model_preds <- predict(full_model, test)
-# linear_MSE <- sum((full_model_preds-test$ARR_DELAY)^2, na.rm=T)/328
-# linear_MSE
 ```
 
-```{r, step-model, message=FALSE}
-library(MASS)
+```{r, baseline-stepl, message=FALSE}
+# use AIC model selection on full model
 step_model <- stepAIC(full_model, trace = FALSE)
 #summary(step_model)
+
+# update full model
 plain_linear_model <- step_model
-```
 
- 
-```{r}
-# interaction1 <- lm(ARR_DELAY ~ 
-#                     DEP_DELAY + 
-#                      OP_CARRIER + 
-#                      DEST + 
-#                      CRS_DEP_TIME + 
-#                      CRS_ARR_TIME + 
-#                      TAXI_OUT + 
-#                      TAXI_IN + 
-#                      TYPE_DELAY,
-#                    data = train)
-
-## op_carrier and crs_dep_time almost significant
-
-#anova(step_model, interaction1)
-
-```
-
-```{r}
-plain_linear_model
-
+# plot full model
 par(mfrow = c(2,2))
 plot(plain_linear_model)
-
 ```
 
-## Adjusted Model No Log Transforms
 
-```{r}
+### (b) Full Log-Transformed Model 
+
+```{r log-lm}
+# fitting models and running ANOVA tests to identify interactions
+
+## first model
+lm.01 <- lm(ARR_DELAY ~ DEP_DELAY + DAY_OF_WEEK + OP_CARRIER + DEST + CRS_DEP_TIME + CRS_ARR_TIME + log_TAXI_OUT + log_TAXI_IN + TYPE_DELAY, train)
+#plot(lm.01)
+#summary(lm.01)
+
+## second model
+step_model <- stepAIC(lm.01, direction = "backward", trace = FALSE)
+#summary(step_model)
+
+## third model
+lm.02 <- lm(ARR_DELAY ~ DEP_DELAY + OP_CARRIER + DEST + CRS_DEP_TIME  + log_TAXI_OUT + log_TAXI_IN + TYPE_DELAY + OP_CARRIER:DEST, train)
+#summary(lm.02)
+#anova(step_model, lm.02)
+
+## fourth model
+lm.03 <- lm(ARR_DELAY ~ DEP_DELAY + OP_CARRIER + DEST + CRS_DEP_TIME  + log_TAXI_OUT + log_TAXI_IN + TYPE_DELAY + OP_CARRIER:DEST + DEST:log_TAXI_IN, train)
+#anova(lm.02, lm.03)
+
+## final log model
+log_linear_model <- lm(ARR_DELAY ~ DEP_DELAY + OP_CARRIER + DEST + CRS_DEP_TIME  + log_TAXI_OUT + log_TAXI_IN + TYPE_DELAY + OP_CARRIER:DEST + DEST:log_TAXI_IN+log_TAXI_OUT:DEP_DELAY, train)
+
+anova(lm.03, log_linear_model)
+summary(log_linear_model)
+plot(log_linear_model)
+```
+
+## (c) Box-Cox-Transformed Response (w/o Log-Transformed Predictors)
+
+```{r bc-transform}
+# adjust response with vertical shift to account for negative responses
+## min(train$ARR_DELAY) = -74 --> shift up by constant 75
+
+## transform repsonse
 train$adj_ARR_DELAY = train$ARR_DELAY + 75
+
+## fit lm for future Box-Cox use
 adj_linear_model <- lm(adj_ARR_DELAY ~ 
                     DEP_DELAY + 
                      OP_CARRIER + 
@@ -451,33 +461,52 @@ adj_linear_model <- lm(adj_ARR_DELAY ~
                      TAXI_IN + 
                      TYPE_DELAY,
                    data = train)
-
-## op_carrier and crs_dep_time almost significant interaction
-
 ```
 
-### Box-Cox
-
+### Box-Cox Setup
 ```{r box-cox-notranslm}
-library(EnvStats)
-bc_model <- boxcox(adj_linear_model, optimize = TRUE)
+# box cox transform (same as case study)
+## call EnvStats library
+bc_model <- EnvStats::boxcox(adj_linear_model, optimize = TRUE)
+# find optimal lambda parameter
 bc_lambda <- bc_model$lambda
 bc_lambda
 #plot(bc_model)
 
 ```
 
-```{r}
-library(dplyr)
+```{r add-bc-resp}
+# add Box-Cox response as variable to train set
 train <- train %>%
   mutate(bc_adj_ARR_DELAY = ((adj_ARR_DELAY^bc_lambda) - 1)/bc_lambda)
 
-hist(train$adj_ARR_DELAY)
-hist(train$bc_adj_ARR_DELAY)
-```
-## Box-Cox Transformed Linear Model (No Transformed Predictors)
+# plot training ARR_DELAY
+ptrain_ARRDELAY <- ggplot(data = train, aes(x = ARR_DELAY)) +
+  geom_histogram(binwidth = 20, fill = "#002D72", color = "#E81828", alpha = 0.8) +
+  labs(x = "Arrival Delay",
+       y = "Frequency",
+       title = "Histogram of ARR_DELAY") + 
+  theme(plot.title = element_text(size = 12,hjust = 0.5),
+        plot.subtitle = element_text(hjust = 0.5),
+        axis.title.x.bottom = element_text(size = 8, face = "italic"),
+        axis.title.y.left = element_text(size = 8))
 
-```{r}
+# plot Box-Cox training ARR_DELAY
+ptrain_bcARRDELAY <- ggplot(data = train, aes(x = bc_adj_ARR_DELAY)) +
+  geom_histogram(fill = "#002D72", color = "#E81828", alpha = 0.8) +
+  labs(x = "Arrival Delay",
+       y = "Frequency",
+       title = "Histogram of ARR_DELAY") + 
+  theme(plot.title = element_text(size = 12,hjust = 0.5),
+        plot.subtitle = element_text(hjust = 0.5),
+        axis.title.x.bottom = element_text(size = 8, face = "italic"),
+        axis.title.y.left = element_text(size = 8))
+
+ptrain_ARRDELAY + ptrain_bcARRDELAY
+```
+### Final Box-Cox Linear Model
+
+```{r bc-model}
 bc_adj_linear_model <- lm(bc_adj_ARR_DELAY ~ 
                     DEP_DELAY + 
                      OP_CARRIER + 
@@ -491,69 +520,96 @@ bc_adj_linear_model <- lm(bc_adj_ARR_DELAY ~
 par(mfrow = c(2,2))
 plot(bc_adj_linear_model)
 summary(bc_adj_linear_model)
+
 ```
 
-```{r}
-par(mfrow = c(2,2))
-plot(adj_linear_model)
-```
 
-### Test Error
+## MLR Test Error Metrics & Predictions
 
 LOOKING AT:
-- log transformed predictors (taxi_in and taxi_out), interactions, no boxcox transformed response
 - model without any interactions or transformations: ENDED UP PERFORMING THE BEST!!!
+- log transformed predictors (taxi_in and taxi_out), interactions, no boxcox transformed response
 - box-cox transformed response, no interactions or predicted transformations
 
-```{r}
-#min(test$ARR_DELAY)
-test$log_linear_preds <- predict(log_linear_model, test)
-
-hist(test$log_linear_preds)
-hist(test$ARR_DELAY)
-
-log_linear_MSE <- sum((test$log_linear_preds-test$ARR_DELAY)^2, na.rm=T)/328
-log_linear_MSE
-
-```
-
-```{r plain-model-test-error}
-#min(test$ARR_DELAY)
+```{r lm-predictions}
+# predictions
+## baseline
 test$plain_mlr_pred <- predict(plain_linear_model, test)
-
-hist(test$plain_mlr_pred)
-hist(test$ARR_DELAY)
-
-plain_linear_model_MSE <- sum((test$ARR_DELAY - test$plain_mlr_pred)^2, na.rm=T)/328
-plain_linear_model_MSE
-```
-
-
-```{r bc-model-test-error}
-#min(test$ARR_DELAY)
+## log 
+test$log_linear_preds <- predict(log_linear_model, test)
+## bc
 test$adj_ARR_DELAY = test$ARR_DELAY + 77
 test$bc_adj_linear_preds <- predict(bc_adj_linear_model, test)
-#hist(test$bc_adj_linear_preds)
-
-
 test <- test %>%
  mutate(adj_linear_preds = ((bc_adj_linear_preds*(bc_lambda) + 1)^(1/bc_lambda)))
-
 test$bc_mlr_pred = test$adj_linear_preds - 77
-hist(test$bc_mlr_pred)
-hist(test$ARR_DELAY)
 
-bc_adj_linear_model_MSE <- sum((test$ARR_DELAY - test$bc_mlr_pred)^2, na.rm=T)/328
+## histogram of predictions vs. actual
+# actual ARR_DELAY in test set
+hist(test$ARR_DELAY)
+ptest_actual <- ggplot(data = test, aes(x = ARR_DELAY)) +
+  geom_histogram(fill = "#E81828", color = "#002D72", alpha = 0.8) +
+  labs(x = "Arrival Delay",
+       y = "Frequency",
+       title = "Histogram of True Predictions of ARR_DELAY") + 
+  theme(plot.title = element_text(size = 12,hjust = 0.5),
+        plot.subtitle = element_text(hjust = 0.5),
+        axis.title.x.bottom = element_text(size = 8, face = "italic"),
+        axis.title.y.left = element_text(size = 8))
+
+# predicted ARR_DELAY in test set -- baseline lm
+ptest_baseline_preds <- ggplot(data = test, aes(x = plain_mlr_pred)) +
+  geom_histogram(fill = "#E81828", color = "#002D72", alpha = 0.8) +
+  labs(x = "Arrival Delay",
+       y = "Frequency",
+       title = "Histogram of Predictions of ARR_DELAY from Baseline Linear Model") + 
+  theme(plot.title = element_text(size = 12,hjust = 0.5),
+        plot.subtitle = element_text(hjust = 0.5),
+        axis.title.x.bottom = element_text(size = 8, face = "italic"),
+        axis.title.y.left = element_text(size = 8))
+
+# predicted ARR_DELAY in test set -- lm with log-trans
+hist(test$log_linear_preds)
+ptest_lm_log_preds <- ggplot(data = test, aes(x = log_linear_preds)) +
+  geom_histogram(fill = "#E81828", color = "#002D72", alpha = 0.8) +
+  labs(x = "Arrival Delay",
+       y = "Frequency",
+       title = "Histogram of Predictions of ARR_DELAY from Linear Model w/ Log-Transformations") + 
+  theme(plot.title = element_text(size = 12,hjust = 0.5),
+        plot.subtitle = element_text(hjust = 0.5),
+        axis.title.x.bottom = element_text(size = 8, face = "italic"),
+        axis.title.y.left = element_text(size = 8))
+
+# predicted ARR_DELAY in test set -- lm with Box-Cox model
+hist(test$log_linear_preds)
+ptest_bc_preds <- ggplot(data = test, aes(x = bc_mlr_pred)) +
+  geom_histogram(fill = "#E81828", color = "#002D72", alpha = 0.8) +
+  labs(x = "Arrival Delay",
+       y = "Frequency",
+       title = "Histogram of Predictions of ARR_DELAY from Linear Model w/ Box-Cox Response") + 
+  theme(plot.title = element_text(size = 12,hjust = 0.5),
+        plot.subtitle = element_text(hjust = 0.5),
+        axis.title.x.bottom = element_text(size = 8, face = "italic"),
+        axis.title.y.left = element_text(size = 8))
+
+(ptest_actual + ptest_baseline_preds) / (ptest_lm_log_preds + ptest_bc_preds)
+
+
+# test MSE calculations
+plain_linear_model_MSE <- sum((test$ARR_DELAY - test$plain_mlr_pred)^2, na.rm=T)/length(test$ARR_DELAY)
+plain_linear_model_MSE
+log_linear_MSE <- sum((test$log_linear_preds-test$ARR_DELAY)^2, na.rm=T)/length(test$ARR_DELAY)
+log_linear_MSE
+bc_adj_linear_model_MSE <- sum((test$ARR_DELAY - test$bc_mlr_pred)^2, na.rm=T)/length(test$ARR_DELAY)
 bc_adj_linear_model_MSE
+
 ```
 
-# GAM MODEL
 
-## Initial Model
+## (2) Generalized Additive Models
 
-fit a gam model with numerical variables on a smoothing spline
-
-```{r}
+### (a) Initial GAM: No Box-Cox on Response
+```{r first-gam}
 gam00 <- gam(ARR_DELAY ~ DAY_OF_WEEK +
                    OP_CARRIER +
                    s(TAXI_IN) +
@@ -565,18 +621,15 @@ gam00 <- gam(ARR_DELAY ~ DAY_OF_WEEK +
                    TYPE_DELAY, data = train)
 
 summary(gam00)
-```
-
-```{r}
 par(mfrow = c(2,3))
 plot.gam(gam00, se=TRUE)
 ```
 
-## Checking Lineartiy
 
+#### Checking Lineartiy
 TAXI_IN may be linear
 
-```{r}
+```{r check-lin-gam}
 gam01 <- gam(ARR_DELAY ~ DAY_OF_WEEK +
                    OP_CARRIER +
                    TAXI_IN +
@@ -592,7 +645,7 @@ anova(gam00, gam01, test = "F")
 
 based on anova test, the model with a smoothing spline on TAXI_IN is a better fit
 
-## More Anova
+#### More ANOVA Tests
 
 DAY_OF_WEEK, DEST, and CRS_ARR_TIME have very high p-values, so let's try an anova test without including them
 
@@ -609,37 +662,26 @@ anova(gam00, gam02, test = "F")
 
 based on the anova test, the model excluding these variables is a better fit
 
-## Model Diagnostics
+### Tuned Initial GAM
 
-```{r}
+```{r final-GAM1}
+# final fit
 summary(gam02)
-```
 
-```{r}
+# diagnostic plots
 par(mfrow = c(2,2))
 gam.check(gam02)
-```
-```{r}
+
+# predictor plots
 par(mfrow = c(2,2))
 plot(gam02)
 ```
 
 
-## Test Error
 
-```{r}
-gam_preds <- predict.gam(gam02, newdata = test)
+## (b) Secondary GAM: Box-Cox on Response
 
-hist(gam_preds)
-hist(test$ARR_DELAY)
-
-gam_MSE <- sum((test$ARR_DELAY - gam_preds)^2, na.rm=T)/328
-gam_MSE
-```
-
-## Boxcox Transformed GAM
-
-```{r}
+```{r final-bc-gam}
 gambc <- gam(bc_adj_ARR_DELAY ~ OP_CARRIER +
                    s(TAXI_IN) +
                    s(TAXI_OUT) +
@@ -647,49 +689,82 @@ gambc <- gam(bc_adj_ARR_DELAY ~ OP_CARRIER +
                    s(CRS_DEP_TIME) + 
                    TYPE_DELAY, data = train)
  
+# final BC GAM fit
 summary(gambc)
-```
 
-
-
-### BC Model Diagnostics
-
-```{r}
+# diagnostic plots
 par(mfrow = c(2,2))
 gam.check(gambc)
-```
-```{r}
+
+# predictor plots
 par(mfrow = c(2,2))
 plot(gambc)
 ```
 
+## GAM Test Error Metrics & Predictions
 
-### BC Test Error
-
-```{r}
+```{r gam-predictions}
+# GAM predictions
+## no BC
+gam_preds <- predict.gam(gam02, newdata = test)
+## BC
 gambc_preds <- predict.gam(gambc, newdata = test)
 adjgam_preds <- ((gambc_preds*(bc_lambda) + 1)^(1/bc_lambda))
 bc_gam_pred = adjgam_preds - 77
 
-hist(bc_gam_pred)
-hist(test$ARR_DELAY)
 
-gambc_MSE <- sum((test$ARR_DELAY - bc_gam_pred)^2, na.rm=T)/328
+## histogram of predictions vs. actual
+# actual ARR_DELAY in test set
+hist(test$ARR_DELAY)
+ptest_actual <- ggplot(data = test, aes(x = ARR_DELAY)) +
+  geom_histogram(fill = "#E81828", color = "#002D72", alpha = 0.8) +
+  labs(x = "Arrival Delay",
+       y = "Frequency",
+       title = "Histogram of True Predictions of ARR_DELAY") + 
+  theme(plot.title = element_text(size = 12,hjust = 0.5),
+        plot.subtitle = element_text(hjust = 0.5),
+        axis.title.x.bottom = element_text(size = 8, face = "italic"),
+        axis.title.y.left = element_text(size = 8))
+
+# predicted ARR_DELAY in test set -- baseline lm
+ptest_gam <- ggplot(data = test, aes(x = gam_preds)) +
+  geom_histogram(fill = "#E81828", color = "#002D72", alpha = 0.8) +
+  labs(x = "Arrival Delay",
+       y = "Frequency",
+       title = "Histogram of Predictions of ARR_DELAY from GAM") + 
+  theme(plot.title = element_text(size = 12,hjust = 0.5),
+        plot.subtitle = element_text(hjust = 0.5),
+        axis.title.x.bottom = element_text(size = 8, face = "italic"),
+        axis.title.y.left = element_text(size = 8))
+
+# predicted ARR_DELAY in test set -- lm with log-trans
+ptest_gam_bc <- ggplot(data = test, aes(x = bc_gam_pred)) +
+  geom_histogram(fill = "#E81828", color = "#002D72", alpha = 0.8) +
+  labs(x = "Arrival Delay",
+       y = "Frequency",
+       title = "Histogram of Predictions of ARR_DELAY from GAM w/ Box-Cox Response") + 
+  theme(plot.title = element_text(size = 12,hjust = 0.5),
+        plot.subtitle = element_text(hjust = 0.5),
+        axis.title.x.bottom = element_text(size = 8, face = "italic"),
+        axis.title.y.left = element_text(size = 8))
+
+(ptest_actual + ptest_gam) / ptest_gam_bc
+
+
+# test MSE calculations
+gam_MSE <- sum((test$ARR_DELAY - gam_preds)^2, na.rm=T)/length(test$ARR_DELAY)
+gam_MSE
+gambc_MSE <- sum((test$ARR_DELAY - bc_gam_pred)^2, na.rm=T)/length(test$ARR_DELAY)
 gambc_MSE
 ```
 
-# TREES
+## (3) Tree-Based Models
 
-## Random Forests
-
-```{r, message=FALSE}
-library(tree)
-library(randomForest)
-```
+## (a) Random Forests
 
 By default, ``randomForest()`` uses $p/3$ variables when building a random forest of regression trees.
 
-```{r}
+```{r rf-fitting}
 set.seed(1)
 
 # optimal number of predictors (param = mtry) used = 2 based on CV
@@ -702,39 +777,27 @@ rf.delay <- randomForest(ARR_DELAY ~ DAY_OF_MONTH +
                    NAS_DELAY,
                    data = train, na.action = na.omit, importance = TRUE,
                    ntree=10000, mtry=2)
-
-# test error
-yhat.rf <- predict(rf.delay, newdata = test)
-rf.MSE <- sum((test$ARR_DELAY - yhat.rf)^2, na.rm=T)/328
-rf.MSE
-```
-
-```{r}
-hist(yhat.rf)
 ```
 
 
 Using the ``importance()`` function, we can view the importance of each variable.
 
-```{r}
+```{r rf-importance}
 importance(rf.delay)
 ```
 
 Two measures of variable importance are reported.  The former is based on the mean decrease in accuracy in predictions on the out of bag samples when a given variable is excluded from the model.  The latter is a measure of the total decrease in node impurity that results from splits over that variable, averaged over all trees (this was plotted in Figure 8.9 in the text).  In the case of regression trees, the node impurity is measured by the training RSS and for classification trees by the deviance.  Plots of these importance measures can be produced using the ``varImpPlot()`` function.
 
-```{r}
+```{r rf-varImp}
 varImpPlot(rf.delay)
 ```
 
-## 4. Boosting 
+## (b) Boosting 
 
 Here we use the ``gbm()`` package, and within it the ``gbm()`` function, to fit boosted regression trees to the ``train`` data set. We run ``gbm()`` with the option ``distribution = "gaussian"`` since this is a regression problem. The argument ``n.trees = 150`` indicates that we want 150 trees, and the option ``interaction.depth = 3`` limits the depth of each tree.
 
-```{r message = FALSE}
-library(gbm)
-library(bst)
-library(plyr)
-library(caret)
+```{r boost-fititng, message = FALSE}
+
 set.seed(1)
 
 # find ideal hyper-parameters through CV
@@ -746,8 +809,8 @@ gbmFit <- train(ARR_DELAY ~ DAY_OF_MONTH +
                  NAS_DELAY +
                  LATE_AIRCRAFT_DELAY, data = train, 
                  method = "gbm")
-
-gbmFit
+## note: commented out due to length of output
+#gbmFit
 
 # boosted model wiht cross-validated hyper-parameters
 boost.delay <- gbm(ARR_DELAY ~ DAY_OF_MONTH +
@@ -763,39 +826,80 @@ boost.delay <- gbm(ARR_DELAY ~ DAY_OF_MONTH +
 
 The ``summary()`` function also provides a relative influence plot and also outputs the relative influence statistics.
 
-```{r}
+```{r boost-summ}
 summary(boost.delay)
 ```
 
 We see that ``DEP_DELAY`` and ``DAY_OF_MONTH`` are by far the most important variables. We can also produce *partial dependence plots* for these two variables.  These plots illustrate the marginal effect of the selected variables on the response after ``integrating`` out the other variables.
 
-```{r}
+```{r boost-imp}
 par(mfrow = c(1,2))
 plot(boost.delay, i = "DEP_DELAY")
 plot(boost.delay, i = "DAY_OF_MONTH")
 ```
 
-We now use the boosted model to predict ``ARR_DELAY`` on the test set:
 
-```{r}
+
+## Trees Test Error Metrics & Predictions
+```{r trees-predictions}
+# predictions
+## random forest
+yhat.rf <- predict(rf.delay, newdata = test)
+## boosting
 yhat.boost <- predict(boost.delay, newdata =test,
                       n.trees = 150)
-boost_MSE <- sum((test$ARR_DELAY-yhat.boost)^2, na.rm = T)/328
+
+## histogram of predictions vs. actual
+# actual ARR_DELAY in test set
+ptest_actual <- ggplot(data = test, aes(x = ARR_DELAY)) +
+  geom_histogram(fill = "#E81828", color = "#002D72", alpha = 0.8) +
+  labs(x = "Arrival Delay",
+       y = "Frequency",
+       title = "Histogram of True Predictions of ARR_DELAY") + 
+  theme(plot.title = element_text(size = 12,hjust = 0.5),
+        plot.subtitle = element_text(hjust = 0.5),
+        axis.title.x.bottom = element_text(size = 8, face = "italic"),
+        axis.title.y.left = element_text(size = 8))
+
+# predicted ARR_DELAY in test set -- baseline lm
+ptest_rf <- ggplot(data = test, aes(x = yhat.rf)) +
+  geom_histogram(fill = "#E81828", color = "#002D72", alpha = 0.8) +
+  labs(x = "Arrival Delay",
+       y = "Frequency",
+       title = "Histogram of Predictions of ARR_DELAY from Random Forest") + 
+  theme(plot.title = element_text(size = 12,hjust = 0.5),
+        plot.subtitle = element_text(hjust = 0.5),
+        axis.title.x.bottom = element_text(size = 8, face = "italic"),
+        axis.title.y.left = element_text(size = 8))
+
+# predicted ARR_DELAY in test set -- lm with log-trans
+ptest_boost <- ggplot(data = test, aes(x = yhat.boost)) +
+  geom_histogram(fill = "#E81828", color = "#002D72", alpha = 0.8) +
+  labs(x = "Arrival Delay",
+       y = "Frequency",
+       title = "Histogram of Predictions of ARR_DELAY from Boosting") + 
+  theme(plot.title = element_text(size = 12,hjust = 0.5),
+        plot.subtitle = element_text(hjust = 0.5),
+        axis.title.x.bottom = element_text(size = 8, face = "italic"),
+        axis.title.y.left = element_text(size = 8))
+
+(ptest_actual + ptest_rf) / ptest_boost
+
+# test MSE calculations
+rf.MSE <- sum((test$ARR_DELAY - yhat.rf)^2, na.rm=T)/length(test$ARR_DELAY)
+rf.MSE
+boost_MSE <- sum((test$ARR_DELAY-yhat.boost)^2, na.rm = T)/length(test$ARR_DELAY)
 boost_MSE
 ```
 
-```{r}
-hist(yhat.boost)
-```
+\newpage
 
-## Test Errors
+## Test Error Tables
 
-
-
-```{r}
+```{r full-table}
 options(scipen = 5, digits = 4)
 model.names <- c("Baseline Linear", "Selected Linear w/ Log-Transformed Predictors", "Selected Linear w/ Box-Cox", "GAM", "GAM w/ Box-Cox", "Random Forest", "Boosting")
-model.types <- c("Multiple Linear Regression", "Multiple Linear Regression", "Multiple Linear Regression", "Generalized Additive Model", "Generalized Additive Model", "Random Forest", "Boosting")
+model.types <- c("Multiple Linear Regression", "Multiple Linear Regression", "Multiple Linear Regression", "Generalized Additive Model", "Generalized Additive Model", "Tree-Based Regression", "Tree-Based Regression")
 
 #model4.ints <- c("FALSE", "FALSE", "FALSE", "FALSE")
 
