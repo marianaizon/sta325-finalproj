@@ -490,6 +490,7 @@ bc_adj_linear_model <- lm(bc_adj_ARR_DELAY ~
                    data = train)
 par(mfrow = c(2,2))
 plot(bc_adj_linear_model)
+summary(bc_adj_linear_model)
 ```
 
 ```{r}
