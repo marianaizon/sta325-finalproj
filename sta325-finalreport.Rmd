@@ -1,7 +1,7 @@
 ---
 title: "STA 325: Final Project Report"
 author: "Calleigh Smith, Hannah Bogomilsky, Hugh Esterson, Maria Henriquez, Mariana Izon"
-date: "November 22, 2020"
+date: "November 23, 2020"
 output: pdf_document
 ---
 
@@ -11,9 +11,9 @@ knitr::opts_chunk$set(echo = TRUE)
 
 # Introduction
 
-The importance of air travel in the United States is unparalleled, connecting distant parts of the country with the aviation industry's hallmarks of efficiency, safety, and reliablility. This mode of transportation offers citizens to conduct business, visit loved ones, and travel for pleasure, and the number of Americans flying is widely on the climb. In fact, in 2019, U.S. airlines carried a staggering 925.5 million passengers, a record-setting number, and a healthy increase of 4.1% over the previous year. However, what is the most prominent complaint from these 925.5 million clients? Perhaps unsurprisingly, the answer is delayed flights.
+The importance of air travel in the United States is unparalleled, connecting distant parts of the country with the aviation industry's hallmarks of efficiency, safety, and reliability. This mode of transportation offers citizens to conduct business, visit loved ones, and travel for pleasure, and the number of Americans flying is widely on the climb. In fact, in 2019, U.S. airlines carried a staggering 925.5 million passengers, a record-setting number, and a healthy increase of 4.1% over the previous year. However, what is the most prominent complaint from these 925.5 million clients? Perhaps unsurprisingly, the answer is delayed flights.
 
-Simply, flight delays brings into question a given airline's devotion to efficiency and reliability, and when such efforts are not met, disgruntled passengers are sure to become an issue. Arrival delays do not occur all too seldomly, with 19.95% of flights incurring arrival delays in 2019, according to the Department of Transportation's Bureau of Statistics. A slew of research has also shown that flight delays, and the ensuing negative reactions by passengers, have consequential effects for all involved, affecting customers' airline choice, as well as their spending habits at a given airport. Thus, it is in the best interest of all parties (customers, airlines, and airport management) to ensure that the maximum number of flights are completed without delay. This goal, of course, is not realistically achieveable, 100% of the time. Yet a model in which to predict arrival delays could benefit all parties involved, offering a better understanding of the duration of any delay and allowing customers and providers to plan to optimize the situation at hand for their collective benefit.
+Simply, flight delays brings into question a given airline's devotion to efficiency and reliability, and when such efforts are not met, disgruntled passengers are sure to become an issue. Arrival delays do not occur all too seldom, with 19.95% of flights incurring arrival delays in 2019, according to the Department of Transportation's Bureau of Statistics. A slew of research has also shown that flight delays, and the ensuing negative reactions by passengers, have consequential effects for all involved, affecting customers' airline choice, as well as their spending habits at a given airport. Thus, it is in the best interest of all parties (customers, airlines, and airport management) to ensure that the maximum number of flights are completed without delay. This goal, of course, is not realistically achievable, 100% of the time. Yet a model in which to predict arrival delays could benefit all parties involved, offering a better understanding of the duration of any delay and allowing customers and providers to plan to optimize the situation at hand for their collective benefit.
 
 With this thought in mind, our group has taken on the task of using machine learning methods to form a model that accurately predicts arrival delays for real-world flights. By focusing on a popular flight route, within a specific interval of time, our team hopes to accurately predict arrival delays, while also [keeping in mind] the interpretability of available predictors, which could help in an explanation in the primary factors of flight delays. Using publicly-accessible data, the team also aims to provide findings that are readily reproducible and interpretable for all audiences, whether it be fellow passengers or airline executives.
 
@@ -36,9 +36,22 @@ It is also important to note the manner in which the response variable is report
 
 Like the taxi times, a similar skew was found in both the predictor of departure delay and the response of arrival delay. For the response variable, we chose to undergo a Box-Cox transformation. However, this transformation proved to be somewhat challenging as the numerical response variable of $ARR\_DELAY$ includes both positive and negative values. As such, we chose to first transform the variable, increasing each value by a set amount, ensuring that the minimum value of the variable was non-negative. From here, a Box-Cox transformation was performed. 
 
-Other interesting findings from our inital exploratory data analysis included finding empirical means and histograms of several predictors and the response. Additionally, from the days of week and days of month histograms and exploratory data analysis, we interestingly discovered that Saturday was an overall slow day in terms of numbers of flights, with a histogram of the number of flights across the days of the month of January 2020 showing the same trend. 
+Other interesting findings from our initial exploratory data analysis included finding empirical means and histograms of several predictors and the response. Additionally, from the days of week and days of month histograms and exploratory data analysis, we interestingly discovered that Saturday was an overall slow day in terms of numbers of flights, with a histogram of the number of flights across the days of the month of January 2020 showing the same trend. 
+
+## Data Dictionary
+
+Below is a comprehensive data dictionary for particular reference. We have included many of the variables in the dataset, with variables that were central in our modeling process bolded.
+
+[insert data dict table]
 
 # Methods
+
+## Overall Methodology
+
+With the topic and data at hand, our project will put a particular emphasis on a model with superior predictive power over that of purely explanation. The airline industry is an especially quantitative field, maximizing their profit and efficiency with techniques such as variable pricing and schedule optimization to ensure that the most efficient combination of aircraft, flight crews, and airports fulfill the demand of all passengers. As such, accurately predicting on-time performance would be a welcomed addition to a performance- and data-driven field like aviation. In fact, an airline who might produce such an accurate model might be able to exhibit an immediate advantage over their market competitors, quickly adjusting to the dynamic needs of any potential delays.
+
+Due to our emphasis on prediction, our modeling steps will take a structured, quantitative approach. As aforementioned, the team will focus on three main model types: multiple linear regression, generalized additive models, and tree-based regression, including random forests and boosting. Within each type of modeling, we will fit a baseline model, before experimenting with different variable transformations and interaction terms. Model selection approaches, as well as cross-validation, will also be utilized to enhance model performance and tune certain parameters. As our quantitative measure of fit, we will turn to test error metrics, especially test set mean squared error (MSE) to analyze the relative performance of each model. We ultimately hope to choose the model with the lowest MSE, while also ensuring that the model is not in any way overfit to the data at hand. While we will certainly prioritize this predictive power, we also hope to glean some intuitive, explanatory findings from our final model. 
+
 ## Multiple Linear Regression
 In order to understand some of the underlying relationships in our data, we began our modeling with various iterations of multiple linear regression. Our first approach was to fit a model with all of our predictors, including the log-transformed predictors, $TAXI\_OUT$ and $TAXI\_IN$. We performed model selection using AIC as the criterion to get rid of some insignificant predictors, including $DAY\_OF\_WEEK$ and $CRS\_ARR\_TIME$.  We then used ANOVA testing to test various interaction terms based on our prior knowledge of these variables and found the following relationships significant in this log-transformed MLR model: airline carrier ($OP\_CARRIER$) & destination ($DEST$), time to taxi in ($log\_TAXI\_IN$) & destination ($DEST$), and time to taxi out ($log\_TAXI\_OUT$) and departure delay ($DEP\_DELAY$).
 
@@ -61,9 +74,53 @@ Given what we know about trees, we decided to attempt two of the more cutting ed
 The second tree-based regression approach we tried was boosting on the same untransformed response and predictor variables. Boosting is beneficial because it allows one to control the interaction depth (`interaction.depth`), number of trees (`n.trees`), and the learning rate of the model (`shrinkage`). In order to find the optimal parameters, we used the `train()` function in the `caret` package, ultimately settling on 3, 150, and 0.1, as determined through cross-validation.
 
 # Results
-# Future Directions
 
-- could expand airports, years, COVID effects, etc.
+## Results Overview
+Carrying out our modeling approach, the above table displays the types of models fit, their respective test set MSE metrics, and their percent improvement upon the last model. Ultimately, it is quite clear that the relative predictive performance of each model seemed to improve upon the previously-fit model. This improvement was especially evident when tree-based regression techniques were applied to the data. Ultimately, due to our priority of prediction and the very significant increase in predictive performance brought about by tree methods, and specifically the boosted ensemble, we opted to choose the boosted method as our final, optimal model.
+
+[insert MSE results table]
+
+## Multiple Linear Regression Results
+Before explaining the optimal model and its relative strengths, it is important to note a few reasons as to why the other modeling approaches may not have been as strong in terms of prediction. Beginning with multiple linear regression, one simple explanation as to its relatively large MSE values would be that the relationship among the predictors and the response variables was not ultimately linear. The baseline linear model, in this case, included one interaction term and yielded a test MSE of 322.46. Other linear model attempt included one version that utilized log-transformed predictors as well as several interaction effects. This selected linear model with log-transformed variables, however, produced a test MSE that was just slightly worse, at 333.90. As discussed with our professor, this relative decrease in performance might not be unexpected, even though the model was fit using valid statistical reasoning, including model selection and ensuring that the predictors followed relatively normal distributions. This might be explained by a relative mismatch between the complexity of these transformations and the overall complexity of both the multiple linear regression approach, as well as the lack of transformations utilized, in this stage, on the response variable. It is also important to briefly think about the meaning of the log-transformed variables in the context of the data. In this case, we chose to experiment log-transforming variables such as $TAXI\_IN$ and $TAXI\_OUT$, both of which are measured in time. Thus, one might expect the "log of time" to not be especially sensical, nor explanatory, in the context of this data. Finally, the last linear model was a selected model, this time using a Box-Cox transformation on the response. This model, which found no interaction terms to be significant, again showed a very slight decrease in predictive performance with a reported MSE of 334.92. Overall, from these relatively high MSE values and a lack of improvement from any of the linear models selected, there appeared to be evidence towards non-linear trends in the data, compelling us to use non-linear methods, like GAMs and trees.
+
+With the original, baseline multiple linear regression providing the lowest MSE, just slightly, this would be our chosen model within the scope of MLR. This model would be written as: 
+
+[insert LATEX]
+
+Below, we have provided histograms of the true distribution of $ARR\_DELAY$ within our test set, paired with histograms of the predicted arrival delays for each of the three linear models analyzed above. As is shown, we can see that the predictions do not seem particularly accurate, deviating significantly from the true values. This too incentivized us to explore other methods to improve our model.
+
+[insert histograms]
+
+## Generalized Additive Model Results
+
+Upon realizing the lack of performance provided by multiple linear regression, our first non-linear method attempted were generalized additive models. GAMs can provide strong predictive power, with the unique ability of seeing the effect of each variable on the response. This property could be particularly useful for our modeling purposes of this data, not sacrificing any predictive power for just a bit more explanation of the variables involved. In this section of our modeling, we fit to models: one without the Box-Cox-transformed response and one with the Box-Cox-transformed response. 
+
+Beginning with the model without the Box-Cox-transformed response, we followed a set of ANOVA tests that offered insight into which variables to include, as well as whether or not smoothing splines would optimize the model's predictive power when fit on certain quantitative predictors. In this case, our final model included four quantitative variables, each with their own smoothing splines, as well as two categorical variables. The resulting MSE from this fit was 312.30, a meaningful increase over those metrics yielded by multiple linear regression. A very similar approach was taken for our GAM model using the Box-Cox-transformed response. In fact, the same mixture of variables and splines were fit to this response variable. However, the MSE increased just slightly to 317.45, implying that that the non-transformed response model was just a slightly better fit for our predictive purposes. While these GAMs did provide more interpretable effects for each of the predictors involved, as well as better performance compared to the previously-fit linear models, the results were not especially pleasing. We hoped to receive better predictive power from these GAMs, but ultimately turned to tree-based methods to perhaps improve the performance a bit further. 
+
+With the non-Box-Cox response GAM model providing the lowest MSE, this would be our chosen model within the scope of GAMs. This model would be written as: 
+
+[insert LATEX]
+
+Below, we have provided histograms of the true distribution of $ARR\_DELAY$ within our test set, paired with histograms of the predicted arrival delays for each of the two GAMs analyzed above.
+
+[insert histograms]
+
+## Tree-Based Regression Results
+
+
+[model weaknesses?]
+
+Below, we have provided histograms of the true distribution of $ARR\_DELAY$ within our test set, paired with histograms of the predicted arrival delays for each of the two tree-based methods analyzed above, with random forest and boosting.
+
+[insert histograms]
+
+# Conclusions & Future Directions
+
+All in all, our final, optimal model for predicting arrival delay times from flights originating from JFK and traveling to SFO and LAX would be a tree-based regression, with boosting. Throughout our explained model techniques and procedures, we have shown that this model provided a drastic increase in predictive performance compared to all other models. Due to our, and the industry's, emphasis on quantitative prediction, this model appears to be the best solution to the problem at hand. However, the final strength of this model was ultimately shown through our step-based procedure that exposed certain weaknesses and strengths of the intermediary models. Thus, we hope to have shown that this progressive technique of using several types of models, with several iterations, offers the most holistic approach to modeling such a dataset.
+
+As with any data-driven analysis, there exists a number of available directions in which our project can be improved and built upon in future work. Firstly, it is important to realize the number of people and organizations that could greatly benefit from a model as developed in this project. The aviation industry is made up of several groups, with the main ones of course being the clientele (passengers), the airlines, and the city- or municipally-run airports. Passengers could greatly benefit by carefully choosing flights that might avoid certain systematic delays, while airlines could more quickly react to delays in anticipation of their actual occurrences. This could allow for a better movement of resources by the airlines and their sub-contractors (flight caterers, fueling, baggage teams, etc.) to ensure that any delayed flight is efficiently dealt with, minimizing the effect of a given delay on the next flight on the same aircraft. Finally, airports themselves could benefit from a predictive model, improving air traffic control flows and patterns or perhaps even capitalizing on certain delays with more seamless boarding processes, leading to greater customer satisfaction. Overall, while sounding perhaps circular or surprising, predicting delay times might be the first step in maximizing the industry's efficiency when delays do, in fact, occur. Importantly, such an improvement would be an improvement for all parties involved in U.S. aviation.
+
+Finally, one acknowledged shortcoming of our project would be extrapolation and overall generalizability. While each step in this project and the provided code is statistically justified and logically sound, the team did focus on a very specific portion of the massive data repository maintained by the USDOT's Bureau of Transportation Statistics. It is important to note that we focused on one month, of one year, with only flights originating from only one airport to just two destinations. As such, the effects found and analyzed throughout the project, while accurate for this time period and route, represent a very small portion of the total air traffic found over the United States of America. We do believe, however, that, while the specific final models of the project will likely not immediately provide the same predictive power when applied to other dates or routes, our modeling *procedure* would be highly beneficial when applied more generally. Additionally, we are fairly confident that the final model type of tree-based regression, with boosting, would provide the strongest prediction, while certain variables would need to be tuned for different datasets. We would hope that the procedures used within this project can be expanded in the future by other teams, as the impact of such a model would only be magnified with such an expansion. This generalization can be applied to other routes and time periods, with a specific interest being the effect that the COVID-19 pandemic has had on aviation arrival delays. Due to the reproducibility of this project, we believe that this goal can be adequately achieved, bringing us all closer to a more reliable, efficient, and enjoyable experience when flying 30,000 feet above our great country.
 
 ## Notes & References
 
