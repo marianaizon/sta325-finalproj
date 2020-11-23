@@ -9,6 +9,11 @@ output: pdf_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+```{r}
+library(kableExtra)
+```
+
+
 # Introduction
 
 The importance of air travel in the United States is unparalleled, connecting distant parts of the country with the aviation industry's hallmarks of efficiency, safety, and reliability. This mode of transportation offers citizens to conduct business, visit loved ones, and travel for pleasure, and the number of Americans flying is widely on the climb. In fact, in 2019, U.S. airlines carried a staggering 925.5 million passengers, a record-setting number, and a healthy increase of 4.1% over the previous year. However, what is the most prominent complaint from these 925.5 million clients? Perhaps unsurprisingly, the answer is delayed flights.
@@ -40,9 +45,68 @@ Other interesting findings from our initial exploratory data analysis included f
 
 ## Data Dictionary
 
-Below is a comprehensive data dictionary for particular reference. We have included many of the variables in the dataset, with variables that were central in our modeling process bolded.
+Below is a comprehensive data dictionary for particular reference. We have included many of the variables in the dataset, especially those variables that were central in our modeling process.
 
-[insert data dict table]
+```{r data-dict, message=FALSE, echo=FALSE, warning=FALSE}
+data <- data.frame(
+Variables = c("DAY_OF_MONTH",
+            "DAY_OF_WEEK",
+            "OP_CARRIER",
+            "TYPE_DELAY",
+            
+            "ORIGIN",
+            "CRS_DEP_TIME",
+            "DEP_TIME",
+            "DEP_DELAY",
+            "TAXI_OUT",
+            
+            "DEST",
+            "CRS_ARR_TIME",
+            "ARR_TIME",
+            "ARR_DELAY",
+            "TAXI_IN"),
+Type = c("numeric",
+         "numeric",
+         "factor",
+         "factor",
+         
+         "factor",
+         "numeric",
+         "numeric",
+         "numeric",
+         "numeric",
+         
+         "factor",
+         "numeric",
+         "numeric",
+         "numeric",
+         "numeric"
+         ),
+Description = c("flight's day of week; Monday (1), Tuesday (2), ..., Sunday (7)",
+                "flight's day of month",
+                "airline providing flight; American (AA), Delta (DL), Alaska Airlines (AS), JetBlue (B6)",
+                "classifaction type of delay; weather, National Air System, security, late aircraft",
+                
+                "flight's origin airport code; all JFK",
+                "Computerized Reservation System/scheduled time of departure; reported in military time, e.g. 7:30pm as 1930",
+                "flight's actual time of departure",
+                "difference in flight's scheduled and actual time of departure; negative values indicate an early departure",
+                "time duration from gate pushback to takeoff upon departure",
+                
+                "flight's destination airport code; SFO or LAX",
+                "Computerized Reservation System/scheduled time of arrival",
+                "flight's actual time of arrival",
+                "difference in flight's scheduled and actual time of arrival; negative values indicate an early departure",
+                "time duration from landing to gate parking upon arrival")
+)
+kable(data, "latex", booktabs = T, linesep = "", caption = "Data Dictionary") %>%
+  pack_rows("General Flight Variables", 1, 4) %>%
+  pack_rows("Departure-Based Variables", 5, 9) %>% 
+  pack_rows("Arrival-Based Variables", 10, 14) %>% 
+  kable_styling(full_width = F, latex_options = c("striped", "hold_position")) %>% 
+  column_spec(1, bold = T, color = "blue") %>% 
+  column_spec(3, width = "30em")
+```
 
 # Methods
 
