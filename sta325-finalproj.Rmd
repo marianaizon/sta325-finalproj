@@ -619,6 +619,8 @@ par(mfrow = c(2,2))
 gam.check(gam02)
 ```
 
+
+
 ## Test Error
 
 ```{r}
@@ -696,6 +698,11 @@ rf.MSE <- sum((test$ARR_DELAY - yhat.rf)^2, na.rm=T)/328
 rf.MSE
 ```
 
+```{r}
+hist(yhat.rf)
+```
+
+
 Using the ``importance()`` function, we can view the importance of each variable.
 
 ```{r}
@@ -766,11 +773,13 @@ boost_MSE <- sum((test$ARR_DELAY-yhat.boost)^2, na.rm = T)/328
 boost_MSE
 ```
 
+```{r}
+hist(yhat.boost)
+```
 
 ## Test Errors
 
-```{r}
-```
+
 
 ```{r}
 options(scipen = 5, digits = 4)
