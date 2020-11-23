@@ -546,12 +546,12 @@ test$bc_mlr_pred = test$adj_linear_preds - 77
 
 ## histogram of predictions vs. actual
 # actual ARR_DELAY in test set
-hist(test$ARR_DELAY)
+#hist(test$ARR_DELAY)
 ptest_actual <- ggplot(data = test, aes(x = ARR_DELAY)) +
   geom_histogram(fill = "#E81828", color = "#002D72", alpha = 0.8) +
   labs(x = "Arrival Delay",
        y = "Frequency",
-       title = "Histogram of True Predictions of ARR_DELAY") + 
+       title = "Actual") + 
   theme(plot.title = element_text(size = 12,hjust = 0.5),
         plot.subtitle = element_text(hjust = 0.5),
         axis.title.x.bottom = element_text(size = 8, face = "italic"),
@@ -562,39 +562,45 @@ ptest_baseline_preds <- ggplot(data = test, aes(x = plain_mlr_pred)) +
   geom_histogram(fill = "#E81828", color = "#002D72", alpha = 0.8) +
   labs(x = "Arrival Delay",
        y = "Frequency",
-       title = "Histogram of Predictions of ARR_DELAY from Baseline Linear Model") + 
+       title = "Baseline Linear Model") + 
   theme(plot.title = element_text(size = 12,hjust = 0.5),
         plot.subtitle = element_text(hjust = 0.5),
         axis.title.x.bottom = element_text(size = 8, face = "italic"),
         axis.title.y.left = element_text(size = 8))
 
 # predicted ARR_DELAY in test set -- lm with log-trans
-hist(test$log_linear_preds)
+# hist(test$log_linear_preds)
 ptest_lm_log_preds <- ggplot(data = test, aes(x = log_linear_preds)) +
   geom_histogram(fill = "#E81828", color = "#002D72", alpha = 0.8) +
   labs(x = "Arrival Delay",
        y = "Frequency",
-       title = "Histogram of Predictions of ARR_DELAY from Linear Model w/ Log-Transformations") + 
+       title = "Linear Model w/ Log-Transformations") + 
   theme(plot.title = element_text(size = 12,hjust = 0.5),
         plot.subtitle = element_text(hjust = 0.5),
         axis.title.x.bottom = element_text(size = 8, face = "italic"),
         axis.title.y.left = element_text(size = 8))
 
 # predicted ARR_DELAY in test set -- lm with Box-Cox model
-hist(test$log_linear_preds)
+#hist(test$log_linear_preds)
 ptest_bc_preds <- ggplot(data = test, aes(x = bc_mlr_pred)) +
   geom_histogram(fill = "#E81828", color = "#002D72", alpha = 0.8) +
   labs(x = "Arrival Delay",
        y = "Frequency",
-       title = "Histogram of Predictions of ARR_DELAY from Linear Model w/ Box-Cox Response") + 
+       title = "Linear Model w/ Box-Cox Response") + 
   theme(plot.title = element_text(size = 12,hjust = 0.5),
         plot.subtitle = element_text(hjust = 0.5),
         axis.title.x.bottom = element_text(size = 8, face = "italic"),
         axis.title.y.left = element_text(size = 8))
 
-(ptest_actual + ptest_baseline_preds) / (ptest_lm_log_preds + ptest_bc_preds)
+mlr_patchwork <- ptest_actual + (ptest_baseline_preds / ptest_bc_preds / ptest_lm_log_preds)
 
+mlr_patchwork + plot_annotation(
+  title = 'Comparing Distributions of ARR_DELAY',
+  subtitle = 'Histograms of actual test values and MLR-predicted values'
+)
+```
 
+```{r}
 # test MSE calculations
 plain_linear_model_MSE <- sum((test$ARR_DELAY - test$plain_mlr_pred)^2, na.rm=T)/length(test$ARR_DELAY)
 plain_linear_model_MSE
@@ -604,7 +610,6 @@ bc_adj_linear_model_MSE <- sum((test$ARR_DELAY - test$bc_mlr_pred)^2, na.rm=T)/l
 bc_adj_linear_model_MSE
 
 ```
-
 
 ## (2) Generalized Additive Models
 
@@ -717,10 +722,10 @@ bc_gam_pred = adjgam_preds - 77
 # actual ARR_DELAY in test set
 hist(test$ARR_DELAY)
 ptest_actual <- ggplot(data = test, aes(x = ARR_DELAY)) +
-  geom_histogram(fill = "#E81828", color = "#002D72", alpha = 0.8) +
+  geom_histogram(fill = "#40E0D0", color = "#002D72", alpha = 0.8) +
   labs(x = "Arrival Delay",
        y = "Frequency",
-       title = "Histogram of True Predictions of ARR_DELAY") + 
+       title = "Actual") + 
   theme(plot.title = element_text(size = 12,hjust = 0.5),
         plot.subtitle = element_text(hjust = 0.5),
         axis.title.x.bottom = element_text(size = 8, face = "italic"),
@@ -728,10 +733,10 @@ ptest_actual <- ggplot(data = test, aes(x = ARR_DELAY)) +
 
 # predicted ARR_DELAY in test set -- baseline lm
 ptest_gam <- ggplot(data = test, aes(x = gam_preds)) +
-  geom_histogram(fill = "#E81828", color = "#002D72", alpha = 0.8) +
+  geom_histogram(fill = "#40E0D0", color = "#002D72", alpha = 0.8) +
   labs(x = "Arrival Delay",
        y = "Frequency",
-       title = "Histogram of Predictions of ARR_DELAY from GAM") + 
+       title = "GAM") + 
   theme(plot.title = element_text(size = 12,hjust = 0.5),
         plot.subtitle = element_text(hjust = 0.5),
         axis.title.x.bottom = element_text(size = 8, face = "italic"),
@@ -739,24 +744,30 @@ ptest_gam <- ggplot(data = test, aes(x = gam_preds)) +
 
 # predicted ARR_DELAY in test set -- lm with log-trans
 ptest_gam_bc <- ggplot(data = test, aes(x = bc_gam_pred)) +
-  geom_histogram(fill = "#E81828", color = "#002D72", alpha = 0.8) +
+  geom_histogram(fill = "#40E0D0", color = "#002D72", alpha = 0.8) +
   labs(x = "Arrival Delay",
        y = "Frequency",
-       title = "Histogram of Predictions of ARR_DELAY from GAM w/ Box-Cox Response") + 
+       title = "GAM w/ Box-Cox Response") + 
   theme(plot.title = element_text(size = 12,hjust = 0.5),
         plot.subtitle = element_text(hjust = 0.5),
         axis.title.x.bottom = element_text(size = 8, face = "italic"),
         axis.title.y.left = element_text(size = 8))
 
-(ptest_actual + ptest_gam) / ptest_gam_bc
+gam_patchwork <- (ptest_gam + ptest_gam_bc) / ptest_actual
+gam_patchwork + plot_annotation(
+  title = 'Comparing Distributions of ARR_DELAY',
+  subtitle = 'Histograms of actual test values and GAM-predicted values'
+)
 
-
+```
+```{r}
 # test MSE calculations
 gam_MSE <- sum((test$ARR_DELAY - gam_preds)^2, na.rm=T)/length(test$ARR_DELAY)
 gam_MSE
 gambc_MSE <- sum((test$ARR_DELAY - bc_gam_pred)^2, na.rm=T)/length(test$ARR_DELAY)
 gambc_MSE
 ```
+
 
 ## (3) Tree-Based Models
 
@@ -852,10 +863,10 @@ yhat.boost <- predict(boost.delay, newdata =test,
 ## histogram of predictions vs. actual
 # actual ARR_DELAY in test set
 ptest_actual <- ggplot(data = test, aes(x = ARR_DELAY)) +
-  geom_histogram(fill = "#E81828", color = "#002D72", alpha = 0.8) +
+  geom_histogram(fill = "#FFFF00", color = "#002D72", alpha = 0.8) +
   labs(x = "Arrival Delay",
        y = "Frequency",
-       title = "Histogram of True Predictions of ARR_DELAY") + 
+       title = "Actual") + 
   theme(plot.title = element_text(size = 12,hjust = 0.5),
         plot.subtitle = element_text(hjust = 0.5),
         axis.title.x.bottom = element_text(size = 8, face = "italic"),
@@ -863,10 +874,10 @@ ptest_actual <- ggplot(data = test, aes(x = ARR_DELAY)) +
 
 # predicted ARR_DELAY in test set -- baseline lm
 ptest_rf <- ggplot(data = test, aes(x = yhat.rf)) +
-  geom_histogram(fill = "#E81828", color = "#002D72", alpha = 0.8) +
+  geom_histogram(fill = "#FFFF00", color = "#002D72", alpha = 0.8) +
   labs(x = "Arrival Delay",
        y = "Frequency",
-       title = "Histogram of Predictions of ARR_DELAY from Random Forest") + 
+       title = "Random Forest") + 
   theme(plot.title = element_text(size = 12,hjust = 0.5),
         plot.subtitle = element_text(hjust = 0.5),
         axis.title.x.bottom = element_text(size = 8, face = "italic"),
@@ -874,17 +885,31 @@ ptest_rf <- ggplot(data = test, aes(x = yhat.rf)) +
 
 # predicted ARR_DELAY in test set -- lm with log-trans
 ptest_boost <- ggplot(data = test, aes(x = yhat.boost)) +
-  geom_histogram(fill = "#E81828", color = "#002D72", alpha = 0.8) +
+  geom_histogram(fill = "#FFFF00", color = "#002D72", alpha = 0.8) +
   labs(x = "Arrival Delay",
        y = "Frequency",
-       title = "Histogram of Predictions of ARR_DELAY from Boosting") + 
+       title = "Boosting") + 
   theme(plot.title = element_text(size = 12,hjust = 0.5),
         plot.subtitle = element_text(hjust = 0.5),
         axis.title.x.bottom = element_text(size = 8, face = "italic"),
         axis.title.y.left = element_text(size = 8))
 
-(ptest_actual + ptest_rf) / ptest_boost
 
+# grid.arrange(ptest_actual, ptest_rf, ptest_boost, ncol = 2,
+#              width = c(2,1,1),
+#              layout_matrix = rbind(c(1,2),
+#                                    c(1, 3)))
+
+trees_patchwork <- (ptest_rf | ptest_boost) / ptest_actual
+trees_patchwork + plot_annotation(
+  title = 'Comparing Distributions of ARR_DELAY',
+  subtitle = 'Histograms of actual test values and tree-based predicted values'
+)
+
+
+```
+
+```{r}
 # test MSE calculations
 rf.MSE <- sum((test$ARR_DELAY - yhat.rf)^2, na.rm=T)/length(test$ARR_DELAY)
 rf.MSE
@@ -896,10 +921,17 @@ boost_MSE
 
 ## Test Error Tables
 
+```{r}
+customGreen = "#71CA97"
+customRed = "#ff7f7f"
+
+library(formattable)
+```
+
 ```{r full-table}
 options(scipen = 5, digits = 4)
 model.names <- c("Baseline Linear", "Selected Linear w/ Log-Transformed Predictors", "Selected Linear w/ Box-Cox", "GAM", "GAM w/ Box-Cox", "Random Forest", "Boosting")
-model.types <- c("Multiple Linear Regression", "Multiple Linear Regression", "Multiple Linear Regression", "Generalized Additive Model", "Generalized Additive Model", "Tree-Based Regression", "Tree-Based Regression")
+model.types <- c("Multiple Linear Regression", "Multiple Linear Regression", "Multiple Linear Regression", "Generalized Additive Model", "Generalized Additive Model", "Tree-Based Regression", "Tree-Based Regression ")
 
 #model4.ints <- c("FALSE", "FALSE", "FALSE", "FALSE")
 
@@ -912,14 +944,20 @@ model.mse.char <- c("322.46", "333.90", "334.92", "312.30", "317.45", "155.01", 
 #model4.cvmse <- c(2.284e+20, "25.66", 25.62, 25.79)
 
 
-#pctchange4_3 <- round(-((ridge.mom4.cvmse - mlr4_4_bc_cv)/mlr4_4_bc_cv)*100, digits = 4)
-#pctchange4_4 <- round(-((gam4_bc_gcv - mlr4_4_bc_cv)/mlr4_4_bc_cv)*100, digits = 4)
+pctchange_1 <- round(-((log_linear_MSE - plain_linear_model_MSE)/plain_linear_model_MSE)*100, digits = 4)
+pctchange_2 <- round(-((bc_adj_linear_model_MSE - plain_linear_model_MSE)/plain_linear_model_MSE)*100, digits = 4)
+pctchange_3 <- round(-((gam_MSE - plain_linear_model_MSE)/plain_linear_model_MSE)*100, digits = 4)
+pctchange_4 <- round(-((gambc_MSE - plain_linear_model_MSE)/plain_linear_model_MSE)*100, digits = 4)
+pctchange_5 <- round(-((rf.MSE - plain_linear_model_MSE)/plain_linear_model_MSE)*100, digits = 4)
+pctchange_6 <- round(-((boost_MSE - plain_linear_model_MSE)/plain_linear_model_MSE)*100, digits = 4)
 
-#model4.pctchange <- c("---", "---", pctchange4_3, pctchange4_4)
+
+model.pctchange <- c("---", pctchange_1, pctchange_2, pctchange_3, pctchange_4, pctchange_5, pctchange_6)
 
 errors.df <- data.frame(model.names, 
                          model.types, 
-                         model.mse.char
+                         model.mse.char,
+                        model.pctchange
                          )
 
  #model4.ints, 
@@ -931,17 +969,74 @@ errors.df <- data.frame(model.names,
 errors.df
 ```
 
+
+```{r mlr-table}
+mlr.model.names <- c("Baseline Linear", "Selected Linear w/ Log-Transformed Predictors", "Selected Linear w/ Box-Cox")
+mlr.mse.char <- c("322.46", "333.90", "334.92")
+
+mlr.error.df <- data.frame(mlr.model.names, mlr.mse.char)
+
+formattable(mlr.error.df,
+            col.names = c("Model Name", "Model MSE"),
+            list(
+  mlr.model.names = formatter("span", style = x ~ ifelse(x == "Baseline Linear", 
+    style(color = "purple", font.weight = "bold"), NA)),
+  mlr.mse.char = formatter("span", style = x ~ ifelse(x == "322.46", 
+    style(color = "purple", font.weight = "bold"), NA))
+            ))
+```
+
 ```{r}
-library(formattable)
+gam.model.names <- c("GAM", "GAM w/ Box-Cox")
+gam.mse.char <- c("312.30", "317.45")
+
+gam.error.df <- data.frame(gam.model.names, gam.mse.char)
+
+formattable(gam.error.df,
+            col.names = c("Model Name", "Model MSE"),
+            list(
+  gam.model.names = formatter("span", style = x ~ ifelse(x == "GAM", 
+    style(color = "purple", font.weight = "bold"), NA)),
+  gam.mse.char = formatter("span", style = x ~ ifelse(x == "312.30", 
+    style(color = "purple", font.weight = "bold"), NA))
+            ))
+```
+
+```{r}
+tree.model.names <- c("Random Forest", "Boosting")
+tree.mse.char <- c("155.01", "129.80")
+
+tree.error.df <- data.frame(tree.model.names, tree.mse.char)
+
+formattable(tree.error.df,
+            col.names = c("Model Name", "Model MSE"),
+            list(
+  tree.model.names = formatter("span", style = x ~ ifelse(x == "Boosting", 
+    style(color = "purple", font.weight = "bold"), NA)),
+  tree.mse.char = formatter("span", style = x ~ ifelse(x == "129.80", 
+    style(color = "purple", font.weight = "bold"), NA))
+            ))
+```
+
+
+
+```{r}
+
 formattable(errors.df,
-            col.names = c("Model Name", "Model Type", "Model MSE"),
+            col.names = c("Model Name", "Model Type", "Model MSE", "Model Percent Improvement"),
             list(
   model.names = formatter("span", style = x ~ ifelse(x == "Boosting", 
     style(color = "purple", font.weight = "bold"), NA)),
   model.mse.char = formatter("span", style = x ~ ifelse(x == "129.80", 
     style(color = "purple", font.weight = "bold"), NA)),
-  model.types = formatter("span", style = x ~ ifelse(x == "Boosting", 
-    style(color = "purple", font.weight = "bold"), NA))
+  model.types = formatter("span", style = x ~ ifelse(x == "Tree-Based Regression ", 
+    style(color = "purple", font.weight = "bold"), NA)),
+  model.pctchange = formatter("span", 
+                                   style = x ~ style(font.weight = "bold", 
+                                                     color = ifelse(x == "---", "black",
+                                                                ifelse(x > 0, customGreen, ifelse(x < 0, customRed, "black")))), 
+                                   x ~ icontext(ifelse(x>0, "arrow-up", "arrow-down"), x)
+                                   )
 ))
 ```
 
