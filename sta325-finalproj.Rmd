@@ -618,7 +618,10 @@ summary(gam02)
 par(mfrow = c(2,2))
 gam.check(gam02)
 ```
-
+```{r}
+par(mfrow = c(2,2))
+plot(gam02)
+```
 
 
 ## Test Error
@@ -646,12 +649,19 @@ gambc <- gam(bc_adj_ARR_DELAY ~ OP_CARRIER +
 summary(gambc)
 ```
 
+
+
 ### BC Model Diagnostics
 
 ```{r}
 par(mfrow = c(2,2))
 gam.check(gambc)
 ```
+```{r}
+par(mfrow = c(2,2))
+plot(gambc)
+```
+
 
 ### BC Test Error
 
