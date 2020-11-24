@@ -505,6 +505,7 @@ ptrain_bcARRDELAY <- ggplot(data = train, aes(x = bc_adj_ARR_DELAY)) +
 
 ptrain_ARRDELAY + ptrain_bcARRDELAY
 ```
+
 ### Final Box-Cox Linear Model
 
 ```{r bc-model}
