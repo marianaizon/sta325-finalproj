@@ -438,6 +438,7 @@ log_linear_model <- lm(ARR_DELAY ~ DEP_DELAY + OP_CARRIER + DEST + CRS_DEP_TIME 
 
 anova(lm.03, log_linear_model)
 summary(log_linear_model)
+par(mfrow = c(2,2))
 plot(log_linear_model)
 ```
 
@@ -496,7 +497,7 @@ ptrain_bcARRDELAY <- ggplot(data = train, aes(x = bc_adj_ARR_DELAY)) +
   geom_histogram(fill = "#002D72", color = "#E81828", alpha = 0.8) +
   labs(x = "Arrival Delay",
        y = "Frequency",
-       title = "Histogram of ARR_DELAY") + 
+       title = "Histogram of Box-Cox(ARR_DELAY)") + 
   theme(plot.title = element_text(size = 12,hjust = 0.5),
         plot.subtitle = element_text(hjust = 0.5),
         axis.title.x.bottom = element_text(size = 8, face = "italic"),
