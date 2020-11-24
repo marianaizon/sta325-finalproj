@@ -105,9 +105,9 @@ plog_TAXI_OUT <- ggplot(data = flights, aes(x = log_TAXI_OUT)) +
 # plot log transform taxi_in
 plog_TAXI_IN <- ggplot(data = flights, aes(x = log_TAXI_IN)) +
   geom_histogram(binwidth = .25, fill = "#FFFF00", color = "#002D72", alpha = .7) +
-  labs(x = "Log-Time to Taxi Out",
+  labs(x = "Log-Time to Taxi In",
        y = "Frequency",
-       title = "Histogram of Log(TAXI_IN)") + 
+       title = "Histogram of log(TAXI_IN)") + 
   theme(plot.title = element_text(size = 10,hjust = 0.5),
         plot.subtitle = element_text(hjust = 0.5),
         axis.title.x.bottom = element_text(size = 8, face = "italic"),
