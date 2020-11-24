@@ -147,11 +147,12 @@ Carrying out our modeling approach, the above table displays the types of models
 ## Multiple Linear Regression Results
 Before explaining the optimal model and its relative strengths, it is important to note a few reasons as to why the other modeling approaches may not have been as strong in terms of prediction. Beginning with multiple linear regression, one simple explanation as to its relatively large MSE values would be that the relationship among the predictors and the response variables was not ultimately linear. The baseline linear model, in this case, included one interaction term and yielded a test MSE of 322.46. Other linear model attempt included one version that utilized log-transformed predictors as well as several interaction effects. This selected linear model with log-transformed variables, however, produced a test MSE that was just slightly worse, at 333.90. As discussed with our professor, this relative decrease in performance might not be unexpected, even though the model was fit using valid statistical reasoning, including model selection and ensuring that the predictors followed relatively normal distributions. This might be explained by a relative mismatch between the complexity of these transformations and the overall complexity of both the multiple linear regression approach, as well as the lack of transformations utilized, in this stage, on the response variable. It is also important to briefly think about the meaning of the log-transformed variables in the context of the data. In this case, we chose to experiment log-transforming variables such as $TAXI\_IN$ and $TAXI\_OUT$, both of which are measured in time. Thus, one might expect the "log of time" to not be especially sensical, nor explanatory, in the context of this data. Finally, the last linear model was a selected model, this time using a Box-Cox transformation on the response. This model, which found no interaction terms to be significant, again showed a very slight decrease in predictive performance with a reported MSE of 334.92. Overall, from these relatively high MSE values and a lack of improvement from any of the linear models selected, there appeared to be evidence towards non-linear trends in the data, compelling us to use non-linear methods, like GAMs and trees.
 
-
-
 With the original, baseline multiple linear regression providing the lowest MSE, just slightly, this would be our chosen model within the scope of MLR. This model would be written as: 
 
-[insert LATEX]
+$$ \widehat{ARR\_DELAY}=-24.10+0.87(DEP\_DELAY)-1.57(OP\_CARRIER(AS))+1.92(OP\_CARRIER(B6)) $$
+$$ -2.30(OP\_CARRIER(DL))-1.83(DEST(SFO))-0.004(CRS\_DEP\_TIME)-0.002(CRS\_ARR\_TIME) $$
+$$ +0.87(TAXI\_OUT)+0.47(TAXI\_IN)-2.22(TYPE\_DELAY(LATE\_AIRCRAFT)) $$
+$$ +25.09(TYPE\_DELAY(NAS))-13.60(TYPE\_DELAY(No\ Delay)) $$
 
 Below, we have provided histograms of the true distribution of $ARR\_DELAY$ within our test set, paired with histograms of the predicted arrival delays for each of the three linear models analyzed above. As is shown, we can see that the predictions do not seem particularly accurate, deviating significantly from the true values. This too incentivized us to explore other methods to improve our model.
 
@@ -165,7 +166,9 @@ Beginning with the model without the Box-Cox-transformed response, we followed a
 
 With the non-Box-Cox response GAM model providing the lowest MSE, this would be our chosen model within the scope of GAMs. This model would be written as: 
 
-[insert LATEX]
+$$ \widehat{ARR\_DELAY}=1.83-1.68(OP\_CARRIER(AS))+2.49(OP\_CARRIER(B6))-3.14(OP\_CARRIER(DL)) $$
+$$ -3.20(TYPE\_DELAY(LATE\_AIRCRAFT))+18.80(TYPE\_DELAY(NAS))-22.41(TYPE\_DELAY(No\ Delay)) $$
+$$ +s(TAXI\_IN)+s(TAXI\_OUT)+s(DEP\_DELAY)+s(CRS\_DEP\_TIME) $$
 
 Below, we have provided histograms of the true distribution of $ARR\_DELAY$ within our test set, paired with histograms of the predicted arrival delays for each of the two GAMs analyzed above.
 
